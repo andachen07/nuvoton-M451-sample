@@ -1,0 +1,23 @@
+--cpu=Cortex-M4.fp.sp
+".\obj\system_m451series.o"
+".\obj\startup_m451series.o"
+".\obj\main.o"
+".\obj\partest.o"
+".\obj\queueset.o"
+".\obj\flash.o"
+".\obj\pollq.o"
+".\obj\tasks.o"
+".\obj\timers.o"
+".\obj\list.o"
+".\obj\queue.o"
+".\obj\port.o"
+".\obj\heap_2.o"
+".\obj\retarget.o"
+".\obj\sys.o"
+".\obj\uart.o"
+".\obj\clk.o"
+".\obj\gpio.o"
+--library_type=microlib --strict --scatter ".\obj\RTOSDemo.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\lst\RTOSDemo.map" -o .\obj\RTOSDemo.axf

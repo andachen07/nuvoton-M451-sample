@@ -115,9 +115,6 @@ void vStartLEDFlashTasks( unsigned portBASE_TYPE uxPriority )
 {
     signed portBASE_TYPE xLEDTask;
 	
-	// PA.13 set to output mode
-	PA->MODE = 0x04000000;
-	
 	/* Create the three tasks. */
 	for( xLEDTask = 0; xLEDTask < ledNUMBER_OF_LEDS; ++xLEDTask )
 	{
@@ -162,10 +159,12 @@ unsigned portBASE_TYPE uxLED;
 		/* Delay for half the flash period then turn the LED on. */
 		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
 		vParTestToggleLED( uxLED );
-
+        vtaskSegLedDisplay();
+     
 		/* Delay for half the flash period then turn the LED off. */
 		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
 		vParTestToggleLED( uxLED );
+        
 	}
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>RVDS_ARMCM4_NUC4xx</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Library\CMSIS\Include;..\..\Library\StdDriver\inc;..\..\Library\Device\Nuvoton\M451Series\Include;..\..\ThirdParty\FreeRTOS\SOURCE\include;..\..\ThirdParty\FreeRTOS\Demo\COMMON\include;..\..\ThirdParty\FreeRTOS\SOURCE\portable\RVDS\ARM_CM4F;..\..\FreeRTOS</IncludePath>
+              <IncludePath>..\..\Library\CMSIS\Include;..\..\Library\StdDriver\inc;..\..\Library\Device\Nuvoton\M451Series\Include;..\..\ThirdParty\FreeRTOS\SOURCE\include;..\..\ThirdParty\FreeRTOS\Demo\COMMON\include;..\..\ThirdParty\FreeRTOS\SOURCE\portable\RVDS\ARM_CM4F;..\..\FreeRTOS;..\..\Library\NuEdu\inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -487,6 +487,16 @@
               <FileName>gpio.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Library\StdDriver\src\gpio.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>NuEdu</GroupName>
+          <Files>
+            <File>
+              <FileName>NuEdu-Basic01_7_Segment.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\M451BSP\Library\NuEdu\src\NuEdu-Basic01_7_Segment.c</FilePath>
             </File>
           </Files>
         </Group>

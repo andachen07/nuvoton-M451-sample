@@ -175,6 +175,7 @@
 
 /* Hardware and starter kit includes. */
 #include "M451Series.h"
+#include "NuEdu-Basic01.h"
 
 #define PLL_CLOCK           72000000
 
@@ -321,6 +322,9 @@ static void prvSetupHardware(void)
 
     /* Init GPIO */
     GPIO_SetMode(PB, BIT2, GPIO_MODE_OUTPUT);
+
+    /* Initi GPIO for 7-segment LEDs */
+    Open_Seven_Segment();
 }
 /*-----------------------------------------------------------*/
 

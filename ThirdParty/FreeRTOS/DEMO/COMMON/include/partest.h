@@ -80,6 +80,7 @@
 void vParTestInitialise( void );
 void vParTestSetLED( unsigned portBASE_TYPE uxLED, signed portBASE_TYPE xValue );
 void vParTestToggleLED( unsigned portBASE_TYPE uxLED );
+void vtaskSegLedDisplay(void);
 
 #endif
 

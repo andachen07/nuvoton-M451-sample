@@ -86,12 +86,14 @@
 #include "partest.h"
 
 #include "M451Series.h"
+#include "NuEdu-Basic01.h"
 
 /* Only the one LED are used. */
 #define partstMAX_LEDS      1
 #define partstFIRST_LED     (1<<2)     // PB.2
 
 static unsigned portSHORT usOutputValue = 0;
+static unsigned segLedValue = 0;
 
 /*-----------------------------------------------------------*/
 
@@ -120,5 +122,12 @@ void vParTestToggleLED(unsigned long ulLED)
         }
         taskEXIT_CRITICAL();
     }
+}
+/*-----------------------------------------------------------*/
+
+void vtaskSegLedDisplay(void)
+{
+        Show_Seven_Segment(segLedValue % 10, 2);
+        segLedValue += 1;
 }
 /*-----------------------------------------------------------*/

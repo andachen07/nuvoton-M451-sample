@@ -414,14 +414,19 @@
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\QueueSet.c</FilePath>
             </File>
             <File>
-              <FileName>flash.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\flash.c</FilePath>
-            </File>
-            <File>
               <FileName>PollQ.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\PollQ.c</FilePath>
+            </File>
+            <File>
+              <FileName>led7Segm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\led7Segm.c</FilePath>
+            </File>
+            <File>
+              <FileName>ledToggle.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\ledToggle.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -496,7 +501,7 @@
             <File>
               <FileName>NuEdu-Basic01_7_Segment.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\M451BSP\Library\NuEdu\src\NuEdu-Basic01_7_Segment.c</FilePath>
+              <FilePath>..\..\Library\NuEdu\src\NuEdu-Basic01_7_Segment.c</FilePath>
             </File>
           </Files>
         </Group>

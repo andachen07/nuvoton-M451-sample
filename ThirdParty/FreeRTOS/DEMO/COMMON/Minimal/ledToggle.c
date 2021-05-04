@@ -56,92 +56,94 @@
     ***************************************************************************
 
 
-    http://www.FreeRTOS.org - Documentation, books, training, latest versions,
+    http://www.FreeRTOS.org - Documentation, books, training, latest versions, 
     license and Real Time Engineers Ltd. contact details.
 
     http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
     including FreeRTOS+Trace - an indispensable productivity tool, and our new
     fully thread aware and reentrant UDP/IP stack.
 
-    http://www.OpenRTOS.com - Real Time Engineers ltd license FreeRTOS to High
-    Integrity Systems, who sell the code with commercial support,
+    http://www.OpenRTOS.com - Real Time Engineers ltd license FreeRTOS to High 
+    Integrity Systems, who sell the code with commercial support, 
     indemnification and middleware, under the OpenRTOS brand.
-
-    http://www.SafeRTOS.com - High Integrity Systems also provide a safety
-    engineered and independently SIL3 certified version for use in safety and
+    
+    http://www.SafeRTOS.com - High Integrity Systems also provide a safety 
+    engineered and independently SIL3 certified version for use in safety and 
     mission critical applications that require provable dependability.
 */
 
-/*-----------------------------------------------------------
- * Simple GPIO (parallel port) IO routines.
- *-----------------------------------------------------------*/
+/**
+ * This version of flash .c is for use on systems that have limited stack space
+ * and no display facilities.  The complete version can be found in the 
+ * Demo/Common/Full directory.
+ * 
+ * Three tasks are created, each of which flash an LED at a different rate.  The first 
+ * LED flashes every 200ms, the second every 400ms, the third every 600ms.
+ *
+ * The LED flash tasks provide instant visual feedback.  They show that the scheduler 
+ * is still operational.
+ *
+ */
 
-#include <stdio.h>
 
-/* Kernel includes. */
+#include <stdlib.h>
+
+/* Scheduler include files. */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Standard demo include. */
+/* Demo program include files. */
 #include "partest.h"
+#include "led.h"
 
 #include "M451Series.h"
-#include "NuEdu-Basic01.h"
 
-/* Only the one LED are used. */
-#define partstMAX_LEDS      1
-#define partstFIRST_LED     (1<<2)     // PB.2
+#define ledFLASH_RATE_BASE	( ( portTickType ) 333 )
 
-static unsigned portSHORT usOutputValue = 0;
-
+/* Variable used by the created tasks to calculate the LED number to use, and
+the rate at which they should flash the LED. */
+static volatile unsigned portBASE_TYPE uxFlashTaskNumber = 0;
 
 /*-----------------------------------------------------------*/
-
-void vParTestToggleLED(unsigned long ulLED)
+void LedToggleTask( void *pvParameters )
 {
-    unsigned portSHORT usBit;
+    portTickType xFlashRate, xLastFlashTime;
+    unsigned portBASE_TYPE uxLED;
 
-    if(ulLED < partstMAX_LEDS)
-    {
-        taskENTER_CRITICAL();
-        {
-            usBit = partstFIRST_LED << ulLED;
+	/* The parameters are not used. */
+	( void ) pvParameters;
 
-            if(usOutputValue & usBit)
-            {
-                usOutputValue &= ~usBit;
-                PB2 = 0;
-                printf("PB.02 Output Lo\n");
-            }
-            else
-            {
-                usOutputValue |= usBit;
-                PB2 = 1;
-                printf("PB.02 Output Hi\n");
-            }
-        }
-        taskEXIT_CRITICAL();
-    }
-}
-/*-----------------------------------------------------------*/
+	/* Calculate the LED and flash rate. */
+	portENTER_CRITICAL();
+	{
+		/* See which of the eight LED's we should use. */
+		uxLED = uxFlashTaskNumber;
 
-void vtaskSegLedDisplay(int segLedValue)
-{
-    int sSegLEDValue = 0;
+		/* Update so the next task uses the next LED. */
+		uxFlashTaskNumber++;
+	}
+	portEXIT_CRITICAL();
 
-    sSegLEDValue = segLedValue / 10;
-    
-    printf("The 7-Seg LED value is %d \n",segLedValue );
+	xFlashRate = ledFLASH_RATE_BASE + ( ledFLASH_RATE_BASE * ( portTickType ) uxLED );
+	xFlashRate /= portTICK_RATE_MS;
 
-    if(segLedValue % 2)
-    {
-        printf("Show 7-Seg LED low byte \n");
-        Show_Seven_Segment((int)(sSegLEDValue / 10), 1);
-    } 
-    else 
-    { 
-        printf("Show 7-Seg LED high byte \n");
-        Show_Seven_Segment((int)(sSegLEDValue % 10), 2);
-    }
-}
-/*-----------------------------------------------------------*/
+	/* We will turn the LED on and off again in the delay period, so each
+	delay is only half the total period. */
+	xFlashRate /= ( portTickType ) 2;
+
+	/* We need to initialise xLastFlashTime prior to the first call to 
+	vTaskDelayUntil(). */
+	xLastFlashTime = xTaskGetTickCount();
+
+	for(;;)
+	{
+		/* Delay for half the flash period then turn the LED on. */
+		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
+		vParTestToggleLED( uxLED );
+
+		/* Delay for half the flash period then turn the LED off. */
+		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
+		vParTestToggleLED( uxLED );
+	}
+} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
+

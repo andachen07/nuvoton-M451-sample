@@ -56,92 +56,27 @@
     ***************************************************************************
 
 
-    http://www.FreeRTOS.org - Documentation, books, training, latest versions,
+    http://www.FreeRTOS.org - Documentation, books, training, latest versions, 
     license and Real Time Engineers Ltd. contact details.
 
     http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
     including FreeRTOS+Trace - an indispensable productivity tool, and our new
     fully thread aware and reentrant UDP/IP stack.
 
-    http://www.OpenRTOS.com - Real Time Engineers ltd license FreeRTOS to High
-    Integrity Systems, who sell the code with commercial support,
+    http://www.OpenRTOS.com - Real Time Engineers ltd license FreeRTOS to High 
+    Integrity Systems, who sell the code with commercial support, 
     indemnification and middleware, under the OpenRTOS brand.
-
-    http://www.SafeRTOS.com - High Integrity Systems also provide a safety
-    engineered and independently SIL3 certified version for use in safety and
+    
+    http://www.SafeRTOS.com - High Integrity Systems also provide a safety 
+    engineered and independently SIL3 certified version for use in safety and 
     mission critical applications that require provable dependability.
 */
 
-/*-----------------------------------------------------------
- * Simple GPIO (parallel port) IO routines.
- *-----------------------------------------------------------*/
+#ifndef LED_H
+#define LED_H
 
-#include <stdio.h>
+void LedToggleTask( void *pvParameters );
+void LedSegTask( void *pvParameters );
 
-/* Kernel includes. */
-#include "FreeRTOS.h"
-#include "task.h"
+#endif
 
-/* Standard demo include. */
-#include "partest.h"
-
-#include "M451Series.h"
-#include "NuEdu-Basic01.h"
-
-/* Only the one LED are used. */
-#define partstMAX_LEDS      1
-#define partstFIRST_LED     (1<<2)     // PB.2
-
-static unsigned portSHORT usOutputValue = 0;
-
-
-/*-----------------------------------------------------------*/
-
-void vParTestToggleLED(unsigned long ulLED)
-{
-    unsigned portSHORT usBit;
-
-    if(ulLED < partstMAX_LEDS)
-    {
-        taskENTER_CRITICAL();
-        {
-            usBit = partstFIRST_LED << ulLED;
-
-            if(usOutputValue & usBit)
-            {
-                usOutputValue &= ~usBit;
-                PB2 = 0;
-                printf("PB.02 Output Lo\n");
-            }
-            else
-            {
-                usOutputValue |= usBit;
-                PB2 = 1;
-                printf("PB.02 Output Hi\n");
-            }
-        }
-        taskEXIT_CRITICAL();
-    }
-}
-/*-----------------------------------------------------------*/
-
-void vtaskSegLedDisplay(int segLedValue)
-{
-    int sSegLEDValue = 0;
-
-    sSegLEDValue = segLedValue / 10;
-    
-    printf("The 7-Seg LED value is %d \n",segLedValue );
-
-    if(segLedValue % 2)
-    {
-        printf("Show 7-Seg LED low byte \n");
-        Show_Seven_Segment((int)(sSegLEDValue / 10), 1);
-    } 
-    else 
-    { 
-        printf("Show 7-Seg LED high byte \n");
-        Show_Seven_Segment((int)(sSegLEDValue % 10), 2);
-    }
-}
-/*-----------------------------------------------------------*/

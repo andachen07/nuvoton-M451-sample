@@ -159,7 +159,7 @@
 
 /* Demo application includes. */
 #include "partest.h"
-#include "flash.h"
+#include "led.h"
 #include "flop.h"
 #include "integer.h"
 #include "PollQ.h"
@@ -180,18 +180,20 @@
 #define PLL_CLOCK           72000000
 
 /* Priorities for the demo application tasks. */
-#define mainFLASH_TASK_PRIORITY             ( tskIDLE_PRIORITY + 1UL )
-#define mainQUEUE_POLL_PRIORITY             ( tskIDLE_PRIORITY + 2UL )
-#define mainSEM_TEST_PRIORITY               ( tskIDLE_PRIORITY + 1UL )
-#define mainBLOCK_Q_PRIORITY                ( tskIDLE_PRIORITY + 2UL )
-#define mainCREATOR_TASK_PRIORITY           ( tskIDLE_PRIORITY + 3UL )
+#define mainTOGGLE_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
+#define mainTOP_TASK_PRIORITY             	( tskIDLE_PRIORITY + 2UL )
+#define mainSEGLED_TASK_PRIORITY            ( tskIDLE_PRIORITY + 3UL )
+#define mainQUEUE_POLL_PRIORITY             ( tskIDLE_PRIORITY + 4UL )
+#define mainSEM_TEST_PRIORITY               ( tskIDLE_PRIORITY + 5UL )
+#define mainBLOCK_Q_PRIORITY                ( tskIDLE_PRIORITY + 6UL )
+#define mainCREATOR_TASK_PRIORITY           ( tskIDLE_PRIORITY + 7UL )
 #define mainFLOP_TASK_PRIORITY              ( tskIDLE_PRIORITY )
-#define mainCHECK_TASK_PRIORITY             ( tskIDLE_PRIORITY + 3UL )
 
-#define mainCHECK_TASK_STACK_SIZE           ( configMINIMAL_STACK_SIZE )
+
+#define mainTOP_TASK_STACK_SIZE           	( configMINIMAL_STACK_SIZE )
 
 /* The time between cycles of the 'check' task. */
-#define mainCHECK_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
+#define mainTOP_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
 
 /* The LED used by the check timer. */
 #define mainCHECK_LED                       ( 3UL )
@@ -216,7 +218,33 @@ the documentation page on the http://www.FreeRTOS.org web site for more
 information. */
 #define mainCREATE_SIMPLE_LED_FLASHER_DEMO_ONLY     0
 
-#define CHECK_TEST
+typedef void (*TaskFunction_t)(void *pvParameters);
+
+static void vLedTopTask(void *pvParameters);
+static void vLedToggleTask(void *pvParameters);
+static void vSegLedTTask(void *pvParameters);
+
+struct _TaskListTbl {
+    TaskFunction_t          		pvTaskCode;
+    const signed char * const   pcName;
+    unsigned long           		usStackDepth;
+    void                    		*pvParameters;
+    unsigned char           		uxPriority;
+    xTaskHandle *          			pxCreatedTask;
+};
+
+#define TaskNum 3
+const struct _TaskListTbl TaskListTbl[TaskNum] = {
+    {   vLedTopTask,                "LED_TOP",              	
+        mainTOP_TASK_STACK_SIZE,    NULL,           
+        mainTOP_TASK_PRIORITY,  	NULL},
+    {   vLedToggleTask,             "LED_TOGGLE",           	
+        configMINIMAL_STACK_SIZE,   NULL,           
+        mainTOGGLE_TASK_PRIORITY,   NULL},
+    {   vSegLedTTask,               "LED_SEG",           	    
+        configMINIMAL_STACK_SIZE,   NULL,           
+        mainSEGLED_TASK_PRIORITY,   NULL},
+};
 
 /*-----------------------------------------------------------*/
 
@@ -226,27 +254,21 @@ information. */
 static void prvSetupHardware(void);
 /*-----------------------------------------------------------*/
 
-#ifdef CHECK_TEST
-static void vCheckTask(void *pvParameters);
-#endif
-
 int main(void)
 {
+    unsigned TaskIndex = 0;
     /* Configure the hardware ready to run the test. */
     prvSetupHardware();
 
-
-#ifdef CHECK_TEST
-    xTaskCreate(vCheckTask, (signed portCHAR *) "Check", mainCHECK_TASK_STACK_SIZE, NULL, mainCHECK_TASK_PRIORITY, NULL);
-#endif
-
-
-    /* Start standard demo/test application flash tasks.  See the comments at
-    the top of this file.  The LED flash tasks are always created.  The other
-    tasks are only created if mainCREATE_SIMPLE_LED_FLASHER_DEMO_ONLY is set to
-    0 (at the top of this file).  See the comments at the top of this file for
-    more information. */
-    vStartLEDFlashTasks(mainFLASH_TASK_PRIORITY);
+    for(TaskIndex=0;TaskIndex<TaskNum;TaskIndex++)
+    {
+        xTaskCreate(TaskListTbl[TaskIndex].pvTaskCode, 
+                    TaskListTbl[TaskIndex].pcName, 
+                    TaskListTbl[TaskIndex].usStackDepth, 
+                    TaskListTbl[TaskIndex].pvParameters, 
+                    TaskListTbl[TaskIndex].uxPriority, 
+                    TaskListTbl[TaskIndex].pxCreatedTask);
+    }
 
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
@@ -388,24 +410,35 @@ void vApplicationTickHook(void)
 #endif /* mainCREATE_SIMPLE_BLINKY_DEMO_ONLY */
 }
 /*-----------------------------------------------------------*/
-#ifdef CHECK_TEST
-static void vCheckTask(void *pvParameters)
+static void vLedTopTask(void *pvParameters)
 {
     portTickType xLastExecutionTime;
 
     xLastExecutionTime = xTaskGetTickCount();
 
-    printf("M451 Check Task is running ...\n");
-    printf("LED toggle at PB.02\n\n");
+    printf("M451 Led Top Task is running ...\n");
+    printf("LED Toggle at PB.02\n\n");
 
     for(;;)
     {
-        /* Perform this check every mainCHECK_DELAY milliseconds. */
-        vTaskDelayUntil(&xLastExecutionTime, mainCHECK_DELAY);
+        /* Perform this top task every mainTOP_DELAY milliseconds. */
+        vTaskDelayUntil(&xLastExecutionTime, mainTOP_DELAY);
         if(xArePollingQueuesStillRunning() != pdTRUE)
         {
             printf("ERROR IN POLL Q\n");
         }
     }
 }
-#endif
+
+/*-----------------------------------------------------------*/
+static void vLedToggleTask(void *pvParameters)
+{
+		LedToggleTask(pvParameters);
+}
+/*-----------------------------------------------------------*/
+static void vSegLedTTask(void *pvParameters)
+{
+		LedSegTask(pvParameters);
+}
+/*-----------------------------------------------------------*/
+

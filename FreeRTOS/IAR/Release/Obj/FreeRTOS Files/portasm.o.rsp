@@ -1,0 +1,1 @@
+﻿D:\_GitHub\MCU\Nuvoton\M451BSP\ThirdParty\FreeRTOS\SOURCE\portable\IAR\ARM_CM4F\portasm.s "-OD:\_GitHub\MCU\Nuvoton\M451BSP\SampleCode\FreeRTOS\IAR\Release\Obj\FreeRTOS Files" -s+ -M<> -w+ -r --cpu ARM7TDMI --fpu None -ID:\_GitHub\MCU\Nuvoton\M451BSP\SampleCode\FreeRTOS\IAR\..\

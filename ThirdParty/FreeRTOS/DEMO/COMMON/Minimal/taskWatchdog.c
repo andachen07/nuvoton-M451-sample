@@ -95,54 +95,72 @@
 
 /* Demo program include files. */
 #include "userTimer.h"
+#include "userMain.h"
 
 #include "M451Series.h"
 
 
-static void vTimer1Task(void *pvParameters);
-static xTaskHandle xTimer1Handle;
-static int segLedValue;
+static void vWatchdogTask(void *pvParameters);
+static xTaskHandle xWatchdogHandle;
+volatile uint32_t g_u32WDTINTCounts;
+volatile uint8_t g_u8IsWDTWakeupINT;
 
 /*---------------------------------------------------------------------------------------------------------*/
 /*  TMR0 IRQ handler                                                                                       */
 /*---------------------------------------------------------------------------------------------------------*/
-void TMR1_IRQHandler(void)
+void WDT_IRQHandler(void)
 {
+    if(g_u32WDTINTCounts < 10)
+        WDT_RESET_COUNTER();
 
-    // clear Timer0 interrupt flag
-    TIMER_ClearIntFlag(TIMER1);
+    if(WDT_GET_TIMEOUT_INT_FLAG() == 1)
+    {
+        /* Clear WDT time-out interrupt flag */
+        WDT_CLEAR_TIMEOUT_INT_FLAG();
+        xTaskResumeFromISR(xWatchdogHandle);
+        g_u32WDTINTCounts++;
+    }
 
-		xTaskResumeFromISR(xTimer1Handle);
+    if(WDT_GET_TIMEOUT_WAKEUP_FLAG() == 1)
+    {
+        /* Clear WDT time-out wake-up flag */
+        WDT_CLEAR_TIMEOUT_WAKEUP_FLAG();
+
+        g_u8IsWDTWakeupINT = 1;
+    }
 }
 /*-----------------------------------------------------------*/
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg )
+void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  )
 {
-	xTaskCreate(vTimer1Task,
-				( signed char * )"TIM1_ISR",
+	xTaskCreate(vWatchdogTask,
+				( signed char * )"WDT_ISR",
 				200,
 				pvArg,
 				uxPriority,
-				&xTimer1Handle);
+				&xWatchdogHandle);
 }
 
 /*-----------------------------------------------------------*/
-static void vTimer1Task(void *pvParameters)
+static void vWatchdogTask(void *pvParameters)
 {
-    /* Start Timer 1 */
-    TIMER_Start(TIMER1);
-    segLedValue = *(int *)pvParameters;
-    #if dbgTIMER1
-        printf("Timer Task Initialize");
-    #endif    
+    /* Unlock protected registers */
+    SYS_UnlockReg();
+
+    /* Configure WDT settings and start WDT counting */
+    WDT_Open(WDT_TIMEOUT_2POW14, WDT_RESET_DELAY_130CLK, TRUE, FALSE);
+    WDT_EnableInt();		
+
+    /* Lock protected registers */
+    SYS_LockReg();
+
+#if dbgWATCHDOG
+    printf("[WDT]: Watchdog Task Initialize \n");
+#endif    
 
     for(;;)
     {
         vTaskSuspend(NULL);
-        segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
-        *(int *)pvParameters = segLedValue;
-    #if dbgTIMER1
-        printf("Timer resume times is %d\n",segLedValue );
-    #endif    
+        printf("[WDT]: Watchdog Timeout Tick is %d\n",g_u32WDTINTCounts );
     }     
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

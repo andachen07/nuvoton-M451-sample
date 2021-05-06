@@ -57,7 +57,7 @@ void WDT_Open(uint32_t u32TimeoutInterval,
 {
     WDT->ALTCTL = u32ResetDelay;
 
-    WDT->CTL = u32TimeoutInterval | WDT_CTL_WDTEN_Msk |
+    WDT->CTL = u32TimeoutInterval | WDT_CTL_WDTEN_Msk | 
                (u32EnableReset << WDT_CTL_RSTEN_Pos) |
                (u32EnableWakeup << WDT_CTL_WKEN_Pos);
     return;

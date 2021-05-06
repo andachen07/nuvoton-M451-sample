@@ -94,7 +94,8 @@
 #include "task.h"
 
 /* Demo program include files. */
-#include "led.h"
+#include "userLed.h"
+#include "userMain.h"
 
 #include "M451Series.h"
 
@@ -135,13 +136,17 @@ void toggleLED(unsigned long ulLED)
             {
                 usOutputValue &= ~usBit;
                 PB2 = 0;
-                printf("PB.02 Output Lo\n");
+            #if dbgTOGGLE_LED    
+                printf("[GPO]: PB.02 Output Lo\n");
+            #endif    
             }
             else
             {
                 usOutputValue |= usBit;
                 PB2 = 1;
-                printf("PB.02 Output Hi\n");
+            #if dbgTOGGLE_LED
+                printf("[GPO]: PB.02 Output Hi\n");
+            #endif    
             }
         }
         taskEXIT_CRITICAL();
@@ -155,6 +160,10 @@ static void vLedToggleTask(void *pvParameters)
 
 	/* The parameters are not used. */
 	( void ) pvParameters;
+
+#if dbgTOGGLE_LED
+    printf("[GPO]: LED Toggle Task Initialize \n");
+#endif 
 
 	/* Calculate the LED and flash rate. */
 	portENTER_CRITICAL();

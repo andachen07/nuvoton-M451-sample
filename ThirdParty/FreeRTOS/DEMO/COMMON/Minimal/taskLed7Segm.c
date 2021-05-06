@@ -94,7 +94,8 @@
 #include "task.h"
 
 /* Demo program include files. */
-#include "led.h"
+#include "userLed.h"
+#include "userMain.h"
 
 #include "M451Series.h"
 #include "NuEdu-Basic01.h"
@@ -117,18 +118,23 @@ void vTaskSegmLED(unsigned portBASE_TYPE uxPriority, void * pvArg)
 /*-----------------------------------------------------------*/
 void segmLedDisplay(int segLedShow,int segLedValue)
 {
-    
-    printf("The 7-Seg LED value is %d \n",segLedValue );
+#if dbg7SEGM_LED     
+    printf("[SGM]: The 7-Seg LED value is %d \n",segLedValue );
+#endif
 
     if(segLedShow % 2)
     {
-        printf("Show 7-Seg LED low byte \n");
         Show_Seven_Segment((int)(segLedValue / 10), 1);
+    #if dbg7SEGM_LED    
+        printf("[SGM]: Show 7-Seg LED low byte \n");
+    #endif    
     } 
     else 
     { 
-        printf("Show 7-Seg LED high byte \n");
         Show_Seven_Segment((int)(segLedValue % 10), 2);
+    #if dbg7SEGM_LED    
+        printf("[SGM]: Show 7-Seg LED high byte \n");
+    #endif    
     }
 }
 /*-----------------------------------------------------------*/
@@ -138,11 +144,13 @@ static void vSegLedTask(void *pvParameters)
     portTickType  xLastWakeTime;
     const portTickType xFrequency = ledFLASH_RATE_BASE; 
 
-
-
 	/* We need to initialise xLastFlashTime prior to the first call to 
 	vTaskDelayUntil(). */
 	xLastWakeTime = xTaskGetTickCount();
+
+#if dbgTOGGLE_LED
+    printf("[SGM]: Segment LED Task Initialize \n");
+#endif 
 
 	for(;;)
 	{

@@ -159,7 +159,6 @@
 
 /* Demo application includes. */
 #include "partest.h"
-#include "led.h"
 #include "flop.h"
 #include "integer.h"
 #include "PollQ.h"
@@ -172,24 +171,28 @@
 #include "QueueSet.h"
 #include "recmutex.h"
 #include "death.h"
-#include "led.h"
+#include "userLed.h"
+#include "userTimer.h"
+#include "userMain.h"
 
 /* Hardware and starter kit includes. */
 #include "M451Series.h"
 #include "NuEdu-Basic01.h"
 
-#define PLL_CLOCK           72000000
+#define PLL_CLOCK                           72000000
+ 
 
 /* Priorities for the demo application tasks. */
 #define mainFLOP_TASK_PRIORITY              ( tskIDLE_PRIORITY )
 #define mainTOGGLE_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
-#define mainUSERIF_TASK_PRIORITY             	( tskIDLE_PRIORITY + 3UL )
+#define mainUSERIF_TASK_PRIORITY            ( tskIDLE_PRIORITY + 3UL )
 #define mainSEGLED_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
 #define mainQUEUE_POLL_PRIORITY             ( tskIDLE_PRIORITY + 2UL )
 #define mainSEM_TEST_PRIORITY               ( tskIDLE_PRIORITY + 1UL )
 #define mainBLOCK_Q_PRIORITY                ( tskIDLE_PRIORITY + 2UL )
 #define mainCREATOR_TASK_PRIORITY           ( tskIDLE_PRIORITY + 3UL )
-#define mainTIMER1_TASK_PRIORITY						( tskIDLE_PRIORITY + 1UL )
+#define mainTIMER1_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
+#define mainWATCHDOG_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 
 /* The time between cycles of the 'check' task. */
 #define mainUSERIF_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
@@ -264,6 +267,9 @@ int main(void)
     vTaskToggleLED(mainTOGGLE_TASK_PRIORITY , (void *) NULL);
     vTaskSegmLED(mainSEGLED_TASK_PRIORITY, (void *)&segLedValue);
     vTaskTimer1(mainTIMER1_TASK_PRIORITY, (void *)&segLedValue);
+#if WATCHDOG_ON 
+    vTaskWatchdog(mainWATCHDOG_TASK_PRIORITY , (void *) NULL);
+#endif
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
     /* The following function will only create more tasks and timers if
@@ -300,11 +306,11 @@ static void prvSetupHardware(void)
     /* Switch HCLK clock source to HIRC */
     CLK_SetHCLK(CLK_CLKSEL0_HCLKSEL_HIRC, CLK_CLKDIV0_HCLK(1));
 
-    /* Enable HXT clock (external XTAL 12MHz) */
-    CLK_EnableXtalRC(CLK_PWRCTL_HXTEN_Msk);
+    /* Enable HXT clock (external XTAL 12MHz) and LIRC */
+    CLK_EnableXtalRC(CLK_PWRCTL_HXTEN_Msk | CLK_PWRCTL_LIRCEN_Msk);
 
     /* Wait for HXT clock ready */
-    CLK_WaitClockReady(CLK_STATUS_HXTSTB_Msk);
+    CLK_WaitClockReady(CLK_STATUS_HXTSTB_Msk | CLK_STATUS_LIRCSTB_Msk);
 
     /* Configure PLL */
     CLK_EnablePLL(CLK_PLLCTL_PLLSRC_HXT, PLL_CLOCK);
@@ -315,14 +321,23 @@ static void prvSetupHardware(void)
     /* Select UART module clock source as HXT and UART module clock divider as 1 */
     CLK_SetModuleClock(UART0_MODULE, CLK_CLKSEL1_UARTSEL_HXT, CLK_CLKDIV0_UART(1));
 
-    /* Set module clock  source */
+    /* Select Timer 1 module clock source as HXT */
     CLK_SetModuleClock(TMR1_MODULE, CLK_CLKSEL1_TMR1SEL_HXT, 0);
+
+#if WATCHDOG_ON
+    /* Select Watchdog Timer module clock source as LIRC */
+    CLK_SetModuleClock(WDT_MODULE, CLK_CLKSEL1_WDTSEL_LIRC, 0);
+#endif
 
     /* Enable peripheral clock */
     CLK_EnableModuleClock(UART0_MODULE);
     CLK_EnableModuleClock(TMR0_MODULE);
-		CLK_EnableModuleClock(TMR1_MODULE);
-  
+	CLK_EnableModuleClock(TMR1_MODULE);
+
+#if WATCHDOG_ON    
+    CLK_EnableModuleClock(WDT_MODULE);
+#endif  
+
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
     SystemCoreClockUpdate();
@@ -343,15 +358,30 @@ static void prvSetupHardware(void)
     /* Init UART to 115200-8n1 for print message */
     UART_Open(UART0, 115200);
 
-		/* Enable Timer 0 interrupt */
+#if WATCHDOG_ON    
+    /* To check if system has been reset by WDT time-out reset or not */
+    if(WDT_GET_RESET_FLAG() == 1)
+    {
+        WDT_CLEAR_RESET_FLAG();
+        printf("[WDT]: *** System has been reset by WDT time-out event ***\n\n");
+        while(1);
+    }
+#endif  
+
+	/* Enable Timer 0 interrupt */
     TIMER_EnableInt(TIMER1);
     NVIC_EnableIRQ(TMR1_IRQn);
+#if WATCHDOG_ON 
+    /* Enable WDT interrupt function */
+    NVIC_EnableIRQ(WDT_IRQn);
+#endif
 
     /* Init GPIO */
     GPIO_SetMode(PB, BIT2, GPIO_MODE_OUTPUT);
 
     /* Initi GPIO for 7-segment LEDs */
     Open_Seven_Segment();
+
 
 }
 /*-----------------------------------------------------------*/
@@ -423,7 +453,7 @@ static void vUserIFTask(void *pvParameters)
     xLastExecutionTime = xTaskGetTickCount();
 
     printf("M451 Uart Console is running ...\n");
-    printf("Please Enter Command : \n\n");
+    printf("[USR]: Please Enter Command : \n\n");
 
     for(;;)
     {
@@ -431,7 +461,7 @@ static void vUserIFTask(void *pvParameters)
         vTaskDelayUntil(&xLastExecutionTime, mainUSERIF_DELAY);
         if(xArePollingQueuesStillRunning() != pdTRUE)
         {
-            printf("ERROR IN POLL Q\n");
+            printf("[USR]: Error in Poll Q\n");
         }
     }
 }

@@ -72,77 +72,14 @@
     mission critical applications that require provable dependability.
 */
 
-/**
- * This version of flash .c is for use on systems that have limited stack space
- * and no display facilities.  The complete version can be found in the 
- * Demo/Common/Full directory.
- * 
- * Three tasks are created, each of which flash an LED at a different rate.  The first 
- * LED flashes every 200ms, the second every 400ms, the third every 600ms.
- *
- * The LED flash tasks provide instant visual feedback.  They show that the scheduler 
- * is still operational.
- *
- */
+#ifndef USER_TIMER_H
+#define USER_TIMER_H
+
+void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+extern void TMR1_IRQHandler(void);
+extern void WDT_IRQHandler(void);
 
 
-#include <stdlib.h>
-#include <stdio.h>
-
-/* Scheduler include files. */
-#include "FreeRTOS.h"
-#include "task.h"
-
-/* Demo program include files. */
-#include "userTimer.h"
-
-#include "M451Series.h"
-
-
-static void vTimer1Task(void *pvParameters);
-static xTaskHandle xTimer1Handle;
-static int segLedValue;
-
-/*---------------------------------------------------------------------------------------------------------*/
-/*  TMR0 IRQ handler                                                                                       */
-/*---------------------------------------------------------------------------------------------------------*/
-void TMR1_IRQHandler(void)
-{
-
-    // clear Timer0 interrupt flag
-    TIMER_ClearIntFlag(TIMER1);
-
-		xTaskResumeFromISR(xTimer1Handle);
-}
-/*-----------------------------------------------------------*/
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg )
-{
-	xTaskCreate(vTimer1Task,
-				( signed char * )"TIM1_ISR",
-				200,
-				pvArg,
-				uxPriority,
-				&xTimer1Handle);
-}
-
-/*-----------------------------------------------------------*/
-static void vTimer1Task(void *pvParameters)
-{
-    /* Start Timer 1 */
-    TIMER_Start(TIMER1);
-    segLedValue = *(int *)pvParameters;
-    #if dbgTIMER1
-        printf("Timer Task Initialize");
-    #endif    
-
-    for(;;)
-    {
-        vTaskSuspend(NULL);
-        segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
-        *(int *)pvParameters = segLedValue;
-    #if dbgTIMER1
-        printf("Timer resume times is %d\n",segLedValue );
-    #endif    
-    }     
-} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
+#endif
 

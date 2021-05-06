@@ -428,6 +428,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskTimer1.c</FilePath>
             </File>
+            <File>
+              <FileName>taskWatchdog.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskWatchdog.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -497,6 +502,11 @@
               <FileName>timer.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Library\StdDriver\src\timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>wdt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Library\StdDriver\src\wdt.c</FilePath>
             </File>
           </Files>
         </Group>

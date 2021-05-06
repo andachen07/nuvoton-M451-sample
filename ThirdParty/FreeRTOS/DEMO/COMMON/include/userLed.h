@@ -72,14 +72,11 @@
     mission critical applications that require provable dependability.
 */
 
-#ifndef LED_H
-#define LED_H
+#ifndef USER_LED_H
+#define USER_LED_H
 
 void vTaskToggleLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
 void vTaskSegmLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-extern void TMR1_IRQHandler(void);
-
 
 #endif
 

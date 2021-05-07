@@ -193,6 +193,7 @@
 #define mainCREATOR_TASK_PRIORITY           ( tskIDLE_PRIORITY + 3UL )
 #define mainTIMER1_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 #define mainWATCHDOG_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
+#define mainWWATCHDOG_TASK_PRIORITY		    ( tskIDLE_PRIORITY + 1UL )
 
 /* The time between cycles of the 'check' task. */
 #define mainUSERIF_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
@@ -270,6 +271,9 @@ int main(void)
 #if WATCHDOG_ON 
     vTaskWatchdog(mainWATCHDOG_TASK_PRIORITY , (void *) NULL);
 #endif
+#if WWDTG_ON 
+    vTaskWWatchdog(mainWWATCHDOG_TASK_PRIORITY , (void *) NULL);
+#endif
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
     /* The following function will only create more tasks and timers if
@@ -328,6 +332,9 @@ static void prvSetupHardware(void)
     /* Select Watchdog Timer module clock source as LIRC */
     CLK_SetModuleClock(WDT_MODULE, CLK_CLKSEL1_WDTSEL_LIRC, 0);
 #endif
+#if WWDTG_ON
+    CLK_SetModuleClock(WWDT_MODULE, CLK_CLKSEL1_WWDTSEL_LIRC, 0);
+#endif
 
     /* Enable peripheral clock */
     CLK_EnableModuleClock(UART0_MODULE);
@@ -336,7 +343,10 @@ static void prvSetupHardware(void)
 
 #if WATCHDOG_ON    
     CLK_EnableModuleClock(WDT_MODULE);
-#endif  
+#endif
+#if WWDTG_ON
+    CLK_EnableModuleClock(WWDT_MODULE);
+#endif
 
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
@@ -358,7 +368,7 @@ static void prvSetupHardware(void)
     /* Init UART to 115200-8n1 for print message */
     UART_Open(UART0, 115200);
 
-#if WATCHDOG_ON    
+   
     /* To check if system has been reset by WDT time-out reset or not */
     if(WDT_GET_RESET_FLAG() == 1)
     {
@@ -366,7 +376,14 @@ static void prvSetupHardware(void)
         printf("[WDT]: *** System has been reset by WDT time-out event ***\n\n");
         while(1);
     }
-#endif  
+
+    /* To check if system has been reset by WWDT time-out reset or not */
+    if(WWDT_GET_RESET_FLAG() == 1)
+    {
+        WWDT_CLEAR_RESET_FLAG();
+        printf("[WWDT]: *** System has been reset by WWDT time-out reset event. [WWDT_CTL: 0x%08X] ***\n\n", WWDT->CTL);
+        while(1);
+    }
 
 	/* Enable Timer 0 interrupt */
     TIMER_EnableInt(TIMER1);
@@ -374,6 +391,10 @@ static void prvSetupHardware(void)
 #if WATCHDOG_ON 
     /* Enable WDT interrupt function */
     NVIC_EnableIRQ(WDT_IRQn);
+#endif
+#if WWDTG_ON
+    /* Enable WWDT NVIC */
+    NVIC_EnableIRQ(WWDT_IRQn);
 #endif
 
     /* Init GPIO */

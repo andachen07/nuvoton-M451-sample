@@ -76,13 +76,15 @@
 #define USER_MAIN_H
 
 // module enable control
-#define WATCHDOG_ON                 1      
+#define WATCHDOG_ON                 0
+#define WWDTG_ON                    1     
 
 // debug message control
 #define dbgTOGGLE_LED               0    
 #define dbg7SEGM_LED                0 
 #define dbgTIMER1                   0 
-#define dbgWATCHDOG                 1 
+#define dbgWATCHDOG                 0
+#define dbgWWDTG                    1 
 
 #endif
 

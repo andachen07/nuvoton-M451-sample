@@ -433,6 +433,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskWatchdog.c</FilePath>
             </File>
+            <File>
+              <FileName>taskWWatchdog.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskWWatchdog.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -507,6 +512,11 @@
               <FileName>wdt.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Library\StdDriver\src\wdt.c</FilePath>
+            </File>
+            <File>
+              <FileName>wwdt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Library\StdDriver\src\wwdt.c</FilePath>
             </File>
           </Files>
         </Group>

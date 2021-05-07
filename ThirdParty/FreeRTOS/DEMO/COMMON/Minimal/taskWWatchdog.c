@@ -72,16 +72,91 @@
     mission critical applications that require provable dependability.
 */
 
-#ifndef USER_TIMER_H
-#define USER_TIMER_H
+/**
+ * This version of flash .c is for use on systems that have limited stack space
+ * and no display facilities.  The complete version can be found in the 
+ * Demo/Common/Full directory.
+ * 
+ * Three tasks are created, each of which flash an LED at a different rate.  The first 
+ * LED flashes every 200ms, the second every 400ms, the third every 600ms.
+ *
+ * The LED flash tasks provide instant visual feedback.  They show that the scheduler 
+ * is still operational.
+ *
+ */
 
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-extern void TMR1_IRQHandler(void);
-extern void WDT_IRQHandler(void);
-extern void WWDT_IRQHandler(void);
+
+#include <stdlib.h>
+#include <stdio.h>
+
+/* Scheduler include files. */
+#include "FreeRTOS.h"
+#include "task.h"
+
+/* Demo program include files. */
+#include "userTimer.h"
+#include "userMain.h"
+
+#include "M451Series.h"
 
 
-#endif
+static void vWWatchdogTask(void *pvParameters);
+static xTaskHandle xWWatchdogHandle;
+volatile uint8_t g_u32WWDTINTCounts;
+
+/*---------------------------------------------------------------------------------------------------------*/
+/*  TMR0 IRQ handler                                                                                       */
+/*---------------------------------------------------------------------------------------------------------*/
+void WWDT_IRQHandler(void)
+{
+    if(WWDT_GET_INT_FLAG() == 1)
+    {
+        /* Clear WWDT compare match interrupt flag */
+        WWDT_CLEAR_INT_FLAG();
+
+        g_u32WWDTINTCounts++;
+
+        if(g_u32WWDTINTCounts < 5)
+        {
+            /* To reload the WWDT counter value to 0x3F */
+            WWDT_RELOAD_COUNTER();
+        }
+
+        xTaskResumeFromISR(xWWatchdogHandle);
+    }
+}
+/*-----------------------------------------------------------*/
+void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  )
+{
+	xTaskCreate(vWWatchdogTask,
+				( signed char * )"WDT_ISR",
+				200,
+				pvArg,
+				uxPriority,
+				&xWWatchdogHandle);
+}
+
+/*-----------------------------------------------------------*/
+static void vWWatchdogTask(void *pvParameters)
+{
+//    /* Unlock protected registers */
+//    SYS_UnlockReg();
+
+    /* Configure WDT settings and start WDT counting */
+    WWDT_Open(WWDT_PRESCALER_1024, 32, TRUE);
+//    WDT_EnableInt();		
+
+//    /* Lock protected registers */
+//    SYS_LockReg();
+    g_u32WWDTINTCounts = 0;
+#if dbgWATCHDOG
+    printf("[WWDT]: Windows Watchdog Task Initialize \n");
+#endif    
+
+    for(;;)
+    {
+        vTaskSuspend(NULL);
+        printf("[WWDT]: Window Watchdog compare match interrupt occurred.(%d)\n",g_u32WWDTINTCounts );
+    }     
+} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

@@ -194,6 +194,7 @@
 #define mainTIMER1_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 #define mainWATCHDOG_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 #define mainWWATCHDOG_TASK_PRIORITY		    ( tskIDLE_PRIORITY + 1UL )
+#define mainRTC_TASK_PRIORITY		        ( tskIDLE_PRIORITY + 1UL )
 
 /* The time between cycles of the 'check' task. */
 #define mainUSERIF_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
@@ -271,8 +272,11 @@ int main(void)
 #if WATCHDOG_ON 
     vTaskWatchdog(mainWATCHDOG_TASK_PRIORITY , (void *) NULL);
 #endif
-#if WWDTG_ON 
+#if WWATCHDOG_ON 
     vTaskWWatchdog(mainWWATCHDOG_TASK_PRIORITY , (void *) NULL);
+#endif
+#if RTC_ON
+    vTaskRTC(mainRTC_TASK_PRIORITY , (void *) NULL);
 #endif
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
@@ -293,7 +297,6 @@ int main(void)
     for more details. */
     for(;;);
 }
-
 
 /*-----------------------------------------------------------*/
 static void prvSetupHardware(void)
@@ -325,29 +328,33 @@ static void prvSetupHardware(void)
     /* Select UART module clock source as HXT and UART module clock divider as 1 */
     CLK_SetModuleClock(UART0_MODULE, CLK_CLKSEL1_UARTSEL_HXT, CLK_CLKDIV0_UART(1));
 
+#if TIMER1_ON
     /* Select Timer 1 module clock source as HXT */
     CLK_SetModuleClock(TMR1_MODULE, CLK_CLKSEL1_TMR1SEL_HXT, 0);
-
+#endif
 #if WATCHDOG_ON
     /* Select Watchdog Timer module clock source as LIRC */
     CLK_SetModuleClock(WDT_MODULE, CLK_CLKSEL1_WDTSEL_LIRC, 0);
 #endif
-#if WWDTG_ON
+#if WWATCHDOG_ON
     CLK_SetModuleClock(WWDT_MODULE, CLK_CLKSEL1_WWDTSEL_LIRC, 0);
 #endif
 
     /* Enable peripheral clock */
     CLK_EnableModuleClock(UART0_MODULE);
     CLK_EnableModuleClock(TMR0_MODULE);
+#if TIMER1_ON
 	CLK_EnableModuleClock(TMR1_MODULE);
-
+#endif
 #if WATCHDOG_ON    
     CLK_EnableModuleClock(WDT_MODULE);
 #endif
-#if WWDTG_ON
+#if WWATCHDOG_ON
     CLK_EnableModuleClock(WWDT_MODULE);
 #endif
-
+#if RTC_ON
+    CLK_EnableModuleClock(RTC_MODULE);
+#endif
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
     SystemCoreClockUpdate();
@@ -362,9 +369,10 @@ static void prvSetupHardware(void)
     /* Lock protected registers */
     SYS_LockReg();
 
+#if TIMER1_ON
     //Initial Timer1 to periodic mode with 2Hz
     TIMER_Open(TIMER1, TIMER_PERIODIC_MODE, 2);
-
+#endif
     /* Init UART to 115200-8n1 for print message */
     UART_Open(UART0, 115200);
 
@@ -385,25 +393,28 @@ static void prvSetupHardware(void)
         while(1);
     }
 
+#if TIMER1_ON
 	/* Enable Timer 0 interrupt */
     TIMER_EnableInt(TIMER1);
     NVIC_EnableIRQ(TMR1_IRQn);
+#endif
 #if WATCHDOG_ON 
     /* Enable WDT interrupt function */
     NVIC_EnableIRQ(WDT_IRQn);
 #endif
-#if WWDTG_ON
+#if WWATCHDOG_ON
     /* Enable WWDT NVIC */
     NVIC_EnableIRQ(WWDT_IRQn);
 #endif
-
+#if RTC_ON
+    /* Enable RTC NVIC */
+    NVIC_EnableIRQ(RTC_IRQn);
+#endif
     /* Init GPIO */
     GPIO_SetMode(PB, BIT2, GPIO_MODE_OUTPUT);
 
     /* Initi GPIO for 7-segment LEDs */
     Open_Seven_Segment();
-
-
 }
 /*-----------------------------------------------------------*/
 

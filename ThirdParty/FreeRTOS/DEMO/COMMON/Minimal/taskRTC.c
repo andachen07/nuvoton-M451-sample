@@ -100,59 +100,74 @@
 #include "M451Series.h"
 
 
-static void vWWatchdogTask(void *pvParameters);
-static xTaskHandle xWWatchdogHandle;
-volatile uint8_t g_u32WWDTINTCounts;
+static void vRTCTask(void *pvParameters);
+static xTaskHandle xRTCHandle;
+volatile uint32_t g_u32RTCTickINT;
 
 /*---------------------------------------------------------------------------------------------------------*/
 /*  TMR0 IRQ handler                                                                                       */
 /*---------------------------------------------------------------------------------------------------------*/
-void WWDT_IRQHandler(void)
+void RTC_IRQHandler(void)
 {
-    if(WWDT_GET_INT_FLAG() == 1)
+    /* To check if RTC tick interrupt occurred */
+    if(RTC_GET_TICK_INT_FLAG() == 1)
     {
-        /* Clear WWDT compare match interrupt flag */
-        WWDT_CLEAR_INT_FLAG();
+        /* Clear RTC tick interrupt flag */
+        RTC_CLEAR_TICK_INT_FLAG();
 
-        g_u32WWDTINTCounts++;
-
-        if(g_u32WWDTINTCounts < 5)
-        {
-            /* To reload the WWDT counter value to 0x3F */
-            WWDT_RELOAD_COUNTER();
-        }
-
-        xTaskResumeFromISR(xWWatchdogHandle);
-    }
+        g_u32RTCTickINT++;
+        xTaskResumeFromISR(xRTCHandle);
+    }		
 }
 /*-----------------------------------------------------------*/
-void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  )
+void vTaskRTC(unsigned portBASE_TYPE uxPriority, void * pvArg )
 {
-	xTaskCreate(vWWatchdogTask,
-				( signed char * )"WDT_ISR",
+	xTaskCreate(vRTCTask,
+				( signed char * )"RTC_ISR",
 				200,
 				pvArg,
 				uxPriority,
-				&xWWatchdogHandle);
+				&xRTCHandle);
 }
 
 /*-----------------------------------------------------------*/
-static void vWWatchdogTask(void *pvParameters)
+static void vRTCTask(void *pvParameters)
 {
-    g_u32WWDTINTCounts = 0;
+    S_RTC_TIME_DATA_T sWriteRTC, sReadRTC;
 
-    /* Configure WDT settings and start WDT counting */
-    WWDT_Open(WWDT_PRESCALER_1024, 32, TRUE);
-#if dbgWWATCHDOG
-    printf("[WWDT]: Windows Watchdog Task Initialize \n");
+    /* Open RTC and start counting */
+    sWriteRTC.u32Year       = 2021;
+    sWriteRTC.u32Month      = 5;
+    sWriteRTC.u32Day        = 7;
+    sWriteRTC.u32DayOfWeek  = RTC_FRIDAY;
+    sWriteRTC.u32Hour       = 10;
+    sWriteRTC.u32Minute     = 44;
+    sWriteRTC.u32Second     = 30;
+    sWriteRTC.u32TimeScale  = RTC_CLOCK_24;
+    RTC_Open(&sWriteRTC);
+
+    /* Enable RTC tick interrupt, one RTC tick is 1/4 second */
+    RTC_EnableInt(RTC_INTEN_TICKIEN_Msk);
+    RTC_SetTickPeriod(RTC_TICK_1_4_SEC);
+    g_u32RTCTickINT = 0;
+#if dbgRTC
+    printf("[RTC] : RTC Task Initialize...\n");
 #endif    
 
     for(;;)
     {
         vTaskSuspend(NULL);
-    #if dbgWWATCHDOG    
-        printf("[WWDT]: Window Watchdog compare match interrupt occurred.(%d)\n",g_u32WWDTINTCounts );
-    #endif
+        if(g_u32RTCTickINT == 4)
+        {
+            g_u32RTCTickINT = 0;
+            /* Read current RTC date/time */
+            RTC_GetDateAndTime(&sReadRTC);
+        #if dbgRTC
+            printf("[RTC]: Resume times - %d/%02d/%02d %02d:%02d:%02d\n",
+                sReadRTC.u32Year, sReadRTC.u32Month, sReadRTC.u32Day, 
+                sReadRTC.u32Hour, sReadRTC.u32Minute, sReadRTC.u32Second);        
+        #endif  
+        }  
     }     
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

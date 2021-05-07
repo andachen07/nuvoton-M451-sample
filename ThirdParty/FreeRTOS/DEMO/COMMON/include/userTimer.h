@@ -78,9 +78,11 @@
 void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
 void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
 void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+void vTaskRTC(unsigned portBASE_TYPE uxPriority, void * pvArg  );
 extern void TMR1_IRQHandler(void);
 extern void WDT_IRQHandler(void);
 extern void WWDT_IRQHandler(void);
+extern void RTC_IRQHandler(void);
 
 
 #endif

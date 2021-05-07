@@ -95,6 +95,7 @@
 
 /* Demo program include files. */
 #include "userTimer.h"
+#include "userMain.h"
 
 #include "M451Series.h"
 
@@ -131,9 +132,9 @@ static void vTimer1Task(void *pvParameters)
     /* Start Timer 1 */
     TIMER_Start(TIMER1);
     segLedValue = *(int *)pvParameters;
-    #if dbgTIMER1
-        printf("Timer Task Initialize");
-    #endif    
+#if dbgTIMER1
+    printf("[TIM]: Timer Task Initialize...\n");
+#endif    
 
     for(;;)
     {
@@ -141,7 +142,7 @@ static void vTimer1Task(void *pvParameters)
         segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
         *(int *)pvParameters = segLedValue;
     #if dbgTIMER1
-        printf("Timer resume times is %d\n",segLedValue );
+        printf("[TIM]: Timer resume times is %d\n",segLedValue );
     #endif    
     }     
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */

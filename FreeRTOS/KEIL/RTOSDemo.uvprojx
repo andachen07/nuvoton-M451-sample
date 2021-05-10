@@ -443,6 +443,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskRTC.c</FilePath>
             </File>
+            <File>
+              <FileName>taskADCKnob.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskADCKnob.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -527,6 +532,11 @@
               <FileName>rtc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Library\StdDriver\src\rtc.c</FilePath>
+            </File>
+            <File>
+              <FileName>eadc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Library\StdDriver\src\eadc.c</FilePath>
             </File>
           </Files>
         </Group>

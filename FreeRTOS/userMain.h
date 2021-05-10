@@ -79,7 +79,8 @@
 #define TIMER1_ON                   0
 #define WATCHDOG_ON                 0
 #define WWATCHDOG_ON                0
-#define RTC_ON                      1     
+#define RTC_ON                      1
+#define ADC_KNOB_ON                 1     
 
 // debug message control
 #define dbgTOGGLE_LED               0    
@@ -88,6 +89,7 @@
 #define dbgWATCHDOG                 0
 #define dbgWWATCHDOG                0
 #define dbgRTC                      1 
+#define dbgADC_KNOB                 1
 
 #endif
 

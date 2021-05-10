@@ -195,6 +195,7 @@
 #define mainWATCHDOG_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 #define mainWWATCHDOG_TASK_PRIORITY		    ( tskIDLE_PRIORITY + 1UL )
 #define mainRTC_TASK_PRIORITY		        ( tskIDLE_PRIORITY + 1UL )
+#define mainLEDKNOB_TASK_PRIORITY           ( tskIDLE_PRIORITY + 1UL )
 
 /* The time between cycles of the 'check' task. */
 #define mainUSERIF_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
@@ -278,6 +279,9 @@ int main(void)
 #if RTC_ON
     vTaskRTC(mainRTC_TASK_PRIORITY , (void *) NULL);
 #endif
+#if ADC_KNOB_ON
+    vTaskADCKnob(mainLEDKNOB_TASK_PRIORITY , (void *) NULL);
+#endif
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
     /* The following function will only create more tasks and timers if
@@ -339,6 +343,10 @@ static void prvSetupHardware(void)
 #if WWATCHDOG_ON
     CLK_SetModuleClock(WWDT_MODULE, CLK_CLKSEL1_WWDTSEL_LIRC, 0);
 #endif
+#if ADC_KNOB_ON
+    /* EADC clock source is HCLK(72MHz), set divider to 8, ADC clock is 72/8 MHz */
+    CLK_SetModuleClock(EADC_MODULE, 0, CLK_CLKDIV0_EADC(8));
+#endif
 
     /* Enable peripheral clock */
     CLK_EnableModuleClock(UART0_MODULE);
@@ -354,6 +362,10 @@ static void prvSetupHardware(void)
 #endif
 #if RTC_ON
     CLK_EnableModuleClock(RTC_MODULE);
+#endif
+#if ADC_KNOB_ON
+    /* Enable EADC module clock */
+    CLK_EnableModuleClock(EADC_MODULE);
 #endif
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
@@ -410,9 +422,13 @@ static void prvSetupHardware(void)
     /* Enable RTC NVIC */
     NVIC_EnableIRQ(RTC_IRQn);
 #endif
+#if ADC_KNOB_ON
+    /* Init GPIO */
+    InitKnobGPIO();
+#else
     /* Init GPIO */
     GPIO_SetMode(PB, BIT2, GPIO_MODE_OUTPUT);
-
+#endif
     /* Initi GPIO for 7-segment LEDs */
     Open_Seven_Segment();
 }

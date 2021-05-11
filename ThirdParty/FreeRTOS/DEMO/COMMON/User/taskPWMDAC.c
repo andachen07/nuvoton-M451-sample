@@ -94,108 +94,136 @@
 #include "task.h"
 
 /* Demo program include files. */
-#include "userLed.h"
+#include "userTimer.h"
 #include "userMain.h"
+#include "userLed.h"
 
 #include "M451Series.h"
+#include "NuEdu-Basic01.h"
 
-#define ledFLASH_RATE_BASE	( ( portTickType ) 333 )
-#define partstMAX_LEDS      1
-#define partstFIRST_LED     (1<<2)     // PB.2
+#define pollADC_RATE_BASE      3000
 
-static unsigned portSHORT usOutputValue = 0;
+static void vPWMDACTask(void *pvParameters);
 
-/* Variable used by the created tasks to calculate the LED number to use, and
-the rate at which they should flash the LED. */
-static volatile unsigned portBASE_TYPE uxFlashTaskNumber = 0;
-static void vLedToggleTask(void *pvParameters);
-
-/*-----------------------------------------------------------*/
-void vTaskToggleLED(unsigned portBASE_TYPE uxPriority, void * pvArg )
+/*---------------------------------------------------------------------------------------------------------*/
+/*  Initialize ADC Knob GPIO                                                                               */
+/*---------------------------------------------------------------------------------------------------------*/
+void InitPWMADCGPIO(void)
 {
-    xTaskCreate(vLedToggleTask,
-                ( signed char * )"LED_TOGGLE",
-                configMINIMAL_STACK_SIZE,
-                pvArg,
-                uxPriority,
-                NULL);
+    /* Configure the GPB9 for ADC analog input pins.  */
+    SYS->GPB_MFPH &= ~(SYS_GPB_MFPH_PB10MFP_Msk );
+    SYS->GPB_MFPH |= (SYS_GPB_MFPH_PB10MFP_EADC_CH7);
+
+    /* Disable the GPB9 digital input path to avoid the leakage current. */
+    GPIO_DISABLE_DIGITAL_PATH(PB, BIT10);
+}
+
+void InitPwmAdc(void)
+{
+    /* Set the ADC internal sampling time, input mode as single-end and enable the A/D converter */
+    EADC_Open(EADC, EADC_CTL_DIFFEN_SINGLE_END);
+    EADC_SetInternalSampleTime(EADC, 6);
+
+    /* Configure the sample module 0 for analog input channel 6 and software trigger source */
+    EADC_ConfigSampleModule(EADC, 1, EADC_SOFTWARE_TRIGGER, 7);
+	
+    /* Enable sample module 0 interrupt */
+    EADC_ENABLE_SAMPLE_MODULE_INT(EADC, 1, 0x2);
+
+    /* Clear the A/D ADINT0 interrupt flag for safe */
+    EADC_CLR_INT_FLAG(EADC, 0x2);
+
+    /* Enable the sample module 0 A/D ADINT0 interrupt */
+    EADC_ENABLE_INT(EADC, 0x2);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+/*  Initialize PWM module                                                                                  */
+/*---------------------------------------------------------------------------------------------------------*/
+void InitPWMDACGPIO(void)
+{
+    /* Set PC9~PC11 multi-function pins for PWM1 Channel0~2  */
+    SYS->GPC_MFPH &= ~(SYS_GPC_MFPH_PC9MFP_Msk | SYS_GPC_MFPH_PC10MFP_Msk | SYS_GPC_MFPH_PC11MFP_Msk);
+    SYS->GPC_MFPH |= SYS_GPC_MFPH_PC9MFP_PWM1_CH0 | SYS_GPC_MFPH_PC10MFP_PWM1_CH1 | SYS_GPC_MFPH_PC11MFP_PWM1_CH2;
+
+    GPIO_SetMode(PC, BIT13, GPIO_MODE_INPUT); //avoid to pwm dac out
+    SYS->GPC_MFPH &= ~SYS_GPC_MFPH_PC13MFP_Msk ;
+    SYS->GPC_MFPH |= SYS_GPC_MFPH_PC13MFP_PWM1_CH4;
+
+}
+/*-----------------------------------------------------------*/
+void writePWMDAC(unsigned char Enable, unsigned char ch0_dut)
+{
+    /* set PWMB channel 0 output configuration */
+    PWM_ConfigOutputChannel(PWM1, 4, 1000, ch0_dut);
+
+    // Start PWM COUNT
+    PWM_Start(PWM1, 1 << 4);
+
+    if(Enable == 0)
+        /* Enable PWM Output path for PWMB channel 0 */
+        PWM_DisableOutput(PWM1, 1 << 4);
+    else
+        /* Diable PWM Output path for PWMB channel 0 */
+        PWM_EnableOutput(PWM1, 1 << 4);
+}
+/*-----------------------------------------------------------*/
+uint32_t GetAdcPWMDAC(void)
+{
+    uint32_t ADC_Raw_Data;
+
+    /* Wait ADC interrupt (g_u32AdcIntFlag will be set at IRQ_Handler function) */
+    while(EADC_GET_INT_FLAG(EADC, 0x2) == 0);
+    ADC_Raw_Data = EADC_GET_CONV_DATA(EADC, 1);
+
+    return ADC_Raw_Data;
+}
+/*-----------------------------------------------------------*/
+void vTaskPWMDAC(unsigned portBASE_TYPE uxPriority, void * pvArg )
+{
+	xTaskCreate(vPWMDACTask,
+				( signed char * )"PWM_DAC",
+				200,
+				pvArg,
+				uxPriority,
+				NULL);
 }
 
 /*-----------------------------------------------------------*/
-void toggleLED(unsigned long ulLED)
+static void vPWMDACTask(void *pvParameters)
 {
-    unsigned portSHORT usBit;
+    portTickType  xLastWakeTime;
+    uint32_t pwmValue = 0, adcValue;      
+    const portTickType xFrequency = pollADC_RATE_BASE; 
 
-    if(ulLED < partstMAX_LEDS)
+    /* Reset PWM1 channel 0~5 */
+    SYS_ResetModule(PWM1_RST);
+    InitPwmAdc();
+
+#if dbgPWM_DAC
+    printf("[PWM]: PWM DAC Task Initialize...\n");
+#endif    
+    writePWMDAC(1,pwmValue);
+	xLastWakeTime = xTaskGetTickCount();
+
+    for(;;)
     {
-        taskENTER_CRITICAL();
-        {
-            usBit = partstFIRST_LED << ulLED;
+        /* Clear the A/D ADI NT0 interrupt flag */
+        EADC_CLR_INT_FLAG(EADC, 0x2);
 
-            if(usOutputValue & usBit)
-            {
-                usOutputValue &= ~usBit;
-                PB2 = 0;
-            #if dbgTOGGLE_LED    
-                printf("[GPO]: PB.02 Output Lo\n");
-            #endif    
-            }
-            else
-            {
-                usOutputValue |= usBit;
-                PB2 = 1;
-            #if dbgTOGGLE_LED
-                printf("[GPO]: PB.02 Output Hi\n");
-            #endif    
-            }
-        }
-        taskEXIT_CRITICAL();
-    }
-}
-/*-----------------------------------------------------------*/
-static void vLedToggleTask(void *pvParameters)
-{
-    portTickType xFlashRate, xLastFlashTime;
-    unsigned portBASE_TYPE uxLED;
+        //Trigger sample module 0 to start A/D conversion
+        EADC_START_CONV(EADC, 0x2);
 
-	/* The parameters are not used. */
-	( void ) pvParameters;
-
-#if dbgTOGGLE_LED
-    printf("[GPO]: LED Toggle Task Initialize \n");
-#endif 
-
-	/* Calculate the LED and flash rate. */
-	portENTER_CRITICAL();
-	{
-		/* See which of the eight LED's we should use. */
-		uxLED = uxFlashTaskNumber;
-
-		/* Update so the next task uses the next LED. */
-		uxFlashTaskNumber++;
-	}
-	portEXIT_CRITICAL();
-
-	xFlashRate = ledFLASH_RATE_BASE + ( ledFLASH_RATE_BASE * ( portTickType ) uxLED );
-	xFlashRate /= portTICK_RATE_MS;
-
-	/* We will turn the LED on and off again in the delay period, so each
-	delay is only half the total period. */
-	xFlashRate /= ( portTickType ) 2;
-
-	/* We need to initialise xLastFlashTime prior to the first call to 
-	vTaskDelayUntil(). */
-	xLastFlashTime = xTaskGetTickCount();
-
-	for(;;)
-	{
-		/* Delay for half the flash period then turn the LED on. */
-		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
-		toggleLED( uxLED );
-
-		/* Delay for half the flash period then turn the LED off. */
-		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
-		toggleLED( uxLED );
-	}
+        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+        //Get Volume Knob Data
+        adcValue = GetAdcPWMDAC();			// Volume Range: 0 ~ 4095
+        showNuEduLED((adcValue * (8 + 1) / 4096));
+        writePWMDAC(1,pwmValue++);
+        if(pwmValue>100)
+            pwmValue = 0;
+    #if dbgPWM_DAC
+        printf("[PWM]: The ADC value is %d\n",adcValue );
+        printf("[PWM]: The PWM value is %d\n",pwmValue );
+    #endif    
+    }     
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

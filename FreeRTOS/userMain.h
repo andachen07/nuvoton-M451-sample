@@ -80,7 +80,8 @@
 #define WATCHDOG_ON                 0
 #define WWATCHDOG_ON                0
 #define RTC_ON                      1
-#define ADC_KNOB_ON                 1     
+#define ADC_KNOB_ON                 0
+#define PWM_DAC_ON                  1    
 
 // debug message control
 #define dbgTOGGLE_LED               0    
@@ -89,7 +90,12 @@
 #define dbgWATCHDOG                 0
 #define dbgWWATCHDOG                0
 #define dbgRTC                      1 
-#define dbgADC_KNOB                 1
+#define dbgADC_KNOB                 0
+#define dbgPWM_DAC                  1
 
+// LED function control
+#define ledPWM_DAC                  1
+#define ledADC_KNOB                 0
+#define ledLED_TOG                  0
 #endif
 

@@ -72,20 +72,133 @@
     mission critical applications that require provable dependability.
 */
 
-#ifndef USER_TIMER_H
-#define USER_TIMER_H
+/**
+ * This version of flash .c is for use on systems that have limited stack space
+ * and no display facilities.  The complete version can be found in the 
+ * Demo/Common/Full directory.
+ * 
+ * Three tasks are created, each of which flash an LED at a different rate.  The first 
+ * LED flashes every 200ms, the second every 400ms, the third every 600ms.
+ *
+ * The LED flash tasks provide instant visual feedback.  They show that the scheduler 
+ * is still operational.
+ *
+ */
 
-void InitPWMDACGPIO(void);
-void InitPWMADCGPIO(void);
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskRTC(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-extern void TMR1_IRQHandler(void);
-extern void WDT_IRQHandler(void);
-extern void WWDT_IRQHandler(void);
-extern void RTC_IRQHandler(void);
 
+#include <stdlib.h>
+#include <stdio.h>
 
-#endif
+/* Scheduler include files. */
+#include "FreeRTOS.h"
+#include "task.h"
+
+/* Demo program include files. */
+#include "userLed.h"
+#include "userMain.h"
+
+#include "M451Series.h"
+
+#define ledFLASH_RATE_BASE	( ( portTickType ) 333 )
+#define partstMAX_LEDS      1
+#define partstFIRST_LED     (1<<2)     // PB.2
+
+static unsigned portSHORT usOutputValue = 0;
+
+/* Variable used by the created tasks to calculate the LED number to use, and
+the rate at which they should flash the LED. */
+static volatile unsigned portBASE_TYPE uxFlashTaskNumber = 0;
+static void vLedToggleTask(void *pvParameters);
+
+/*-----------------------------------------------------------*/
+void vTaskToggleLED(unsigned portBASE_TYPE uxPriority, void * pvArg )
+{
+    xTaskCreate(vLedToggleTask,
+                ( signed char * )"LED_TOGGLE",
+                configMINIMAL_STACK_SIZE,
+                pvArg,
+                uxPriority,
+                NULL);
+}
+
+/*-----------------------------------------------------------*/
+void toggleLED(unsigned long ulLED)
+{
+    unsigned portSHORT usBit;
+
+    if(ulLED < partstMAX_LEDS)
+    {
+        taskENTER_CRITICAL();
+        {
+            usBit = partstFIRST_LED << ulLED;
+
+            if(usOutputValue & usBit)
+            {
+                usOutputValue &= ~usBit;
+                showNuEduLED(0);
+            #if dbgTOGGLE_LED    
+                printf("[GPO]: PB.02 Output Lo\n");
+            #endif    
+            }
+            else
+            {
+                usOutputValue |= usBit;
+                showNuEduLED(1);
+            #if dbgTOGGLE_LED
+                printf("[GPO]: PB.02 Output Hi\n");
+            #endif    
+            }
+        }
+        taskEXIT_CRITICAL();
+    }
+}
+/*-----------------------------------------------------------*/
+static void vLedToggleTask(void *pvParameters)
+{
+    portTickType xFlashRate, xLastFlashTime;
+    unsigned portBASE_TYPE uxLED;
+
+	/* The parameters are not used. */
+	( void ) pvParameters;
+
+#if dbgTOGGLE_LED
+    printf("[GPO]: LED Toggle Task Initialize \n");
+#endif 
+
+	/* Calculate the LED and flash rate. */
+	portENTER_CRITICAL();
+	{
+		/* See which of the eight LED's we should use. */
+		uxLED = uxFlashTaskNumber;
+
+		/* Update so the next task uses the next LED. */
+		uxFlashTaskNumber++;
+	}
+	portEXIT_CRITICAL();
+
+	xFlashRate = ledFLASH_RATE_BASE + ( ledFLASH_RATE_BASE * ( portTickType ) uxLED );
+	xFlashRate /= portTICK_RATE_MS;
+
+	/* We will turn the LED on and off again in the delay period, so each
+	delay is only half the total period. */
+	xFlashRate /= ( portTickType ) 2;
+
+	/* We need to initialise xLastFlashTime prior to the first call to 
+	vTaskDelayUntil(). */
+	xLastFlashTime = xTaskGetTickCount();
+
+	for(;;)
+	{
+		/* Delay for half the flash period then turn the LED on. */
+		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
+    #if ledLED_TOG    
+		toggleLED( uxLED );
+    #endif
+		/* Delay for half the flash period then turn the LED off. */
+		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
+    #if ledLED_TOG     
+		toggleLED( uxLED );
+    #endif    
+	}
+} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

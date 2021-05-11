@@ -195,7 +195,8 @@
 #define mainWATCHDOG_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 #define mainWWATCHDOG_TASK_PRIORITY		    ( tskIDLE_PRIORITY + 1UL )
 #define mainRTC_TASK_PRIORITY		        ( tskIDLE_PRIORITY + 1UL )
-#define mainLEDKNOB_TASK_PRIORITY           ( tskIDLE_PRIORITY + 1UL )
+#define mainADCKNOB_TASK_PRIORITY           ( tskIDLE_PRIORITY + 1UL )
+#define mainPWMDAC_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
 
 /* The time between cycles of the 'check' task. */
 #define mainUSERIF_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
@@ -223,7 +224,7 @@ information. */
 typedef void (*TaskFunction_t)(void *pvParameters);
 
 static void vUserIFTask(void *pvParameters);
-static int segLedValue = 0;
+static int segLedValue = 0, adcLevel = 0;
 
 struct _TaskListTbl {
     TaskFunction_t          		pvTaskCode;
@@ -280,7 +281,10 @@ int main(void)
     vTaskRTC(mainRTC_TASK_PRIORITY , (void *) NULL);
 #endif
 #if ADC_KNOB_ON
-    vTaskADCKnob(mainLEDKNOB_TASK_PRIORITY , (void *) NULL);
+    vTaskADCKnob(mainADCKNOB_TASK_PRIORITY , (void *)&adcLevel );
+#endif
+#if PWM_DAC_ON
+    vTaskPWMDAC(mainPWMDAC_TASK_PRIORITY , (void *)&adcLevel);
 #endif
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
@@ -347,6 +351,12 @@ static void prvSetupHardware(void)
     /* EADC clock source is HCLK(72MHz), set divider to 8, ADC clock is 72/8 MHz */
     CLK_SetModuleClock(EADC_MODULE, 0, CLK_CLKDIV0_EADC(8));
 #endif
+#if PWM_DAC_ON
+    /* EADC clock source is HCLK(72MHz), set divider to 8, ADC clock is 72/8 MHz */
+    CLK_SetModuleClock(EADC_MODULE, 0, CLK_CLKDIV0_EADC(8));
+    /* Select PWM module clock source */
+    CLK_SetModuleClock(PWM1_MODULE, CLK_CLKSEL2_PWM1SEL_PCLK1, 0);
+#endif
 
     /* Enable peripheral clock */
     CLK_EnableModuleClock(UART0_MODULE);
@@ -367,6 +377,13 @@ static void prvSetupHardware(void)
     /* Enable EADC module clock */
     CLK_EnableModuleClock(EADC_MODULE);
 #endif
+#if PWM_DAC_ON
+    /* Enable EADC module clock */
+    CLK_EnableModuleClock(EADC_MODULE);
+    /* Enable PWM module clock */
+    CLK_EnableModuleClock(PWM1_MODULE);
+#endif
+
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
     SystemCoreClockUpdate();
@@ -424,12 +441,18 @@ static void prvSetupHardware(void)
 #endif
 #if ADC_KNOB_ON
     /* Init GPIO */
-    InitKnobGPIO();
-#else
-    /* Init GPIO */
-    GPIO_SetMode(PB, BIT2, GPIO_MODE_OUTPUT);
+    InitAdcKnobGPIO();
 #endif
-    /* Initi GPIO for 7-segment LEDs */
+
+#if PWM_DAC_ON
+    InitPWMDACGPIO();
+    InitPWMADCGPIO();
+#endif
+
+    /* Init GPIO for LEDs */
+    InitNuEduLED();
+
+    /* Init GPIO for 7-segment LEDs */
     Open_Seven_Segment();
 }
 /*-----------------------------------------------------------*/

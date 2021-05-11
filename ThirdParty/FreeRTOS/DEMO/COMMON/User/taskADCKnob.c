@@ -72,20 +72,130 @@
     mission critical applications that require provable dependability.
 */
 
-#ifndef USER_TIMER_H
-#define USER_TIMER_H
+/**
+ * This version of flash .c is for use on systems that have limited stack space
+ * and no display facilities.  The complete version can be found in the 
+ * Demo/Common/Full directory.
+ * 
+ * Three tasks are created, each of which flash an LED at a different rate.  The first 
+ * LED flashes every 200ms, the second every 400ms, the third every 600ms.
+ *
+ * The LED flash tasks provide instant visual feedback.  They show that the scheduler 
+ * is still operational.
+ *
+ */
 
-void InitPWMDACGPIO(void);
-void InitPWMADCGPIO(void);
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskRTC(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-extern void TMR1_IRQHandler(void);
-extern void WDT_IRQHandler(void);
-extern void WWDT_IRQHandler(void);
-extern void RTC_IRQHandler(void);
+
+#include <stdlib.h>
+#include <stdio.h>
+
+/* Scheduler include files. */
+#include "FreeRTOS.h"
+#include "task.h"
+
+/* Demo program include files. */
+#include "userTimer.h"
+#include "userMain.h"
+#include "userLed.h"
+
+#include "M451Series.h"
+
+#define pollADC_RATE_BASE      300
 
 
-#endif
+static void vADCKnobTask(void *pvParameters);
+static xTaskHandle xADCKnobHandle;
+
+/*---------------------------------------------------------------------------------------------------------*/
+/*  Initialize ADC Knob GPIO                                                                               */
+/*---------------------------------------------------------------------------------------------------------*/
+void InitAdcKnobGPIO(void)
+{
+    /* Configure the GPB9 for ADC analog input pins.  */
+    SYS->GPB_MFPH &= ~(SYS_GPB_MFPH_PB9MFP_Msk );
+    SYS->GPB_MFPH |= (SYS_GPB_MFPH_PB9MFP_EADC_CH6);
+
+    /* Disable the GPB9 digital input path to avoid the leakage current. */
+    GPIO_DISABLE_DIGITAL_PATH(PB, BIT9);
+}
+
+void InitAdcKnob(void)
+{
+    /* Set the ADC internal sampling time, input mode as single-end and enable the A/D converter */
+    EADC_Open(EADC, EADC_CTL_DIFFEN_SINGLE_END);
+    EADC_SetInternalSampleTime(EADC, 6);
+
+    /* Configure the sample module 0 for analog input channel 6 and software trigger source */
+    EADC_ConfigSampleModule(EADC, 0, EADC_SOFTWARE_TRIGGER, 6);
+	
+    /* Enable sample module 0 interrupt */
+    EADC_ENABLE_SAMPLE_MODULE_INT(EADC, 0, 0x1);
+
+    /* Clear the A/D ADINT0 interrupt flag for safe */
+    EADC_CLR_INT_FLAG(EADC, 0x1);
+
+    /* Enable the sample module 0 A/D ADINT0 interrupt */
+    EADC_ENABLE_INT(EADC, 0x1);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+/*  ADC Knob Function                                                                                               */
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t getADCKnob(void)
+{
+    uint32_t ADC_Raw_Data;
+
+    /* Wait ADC interrupt Flag be setted */
+    while(EADC_GET_INT_FLAG(EADC, 0x1) == 0);
+    
+    /* Clear the A/D ADINT0 interrupt flag */
+    EADC_CLR_INT_FLAG(EADC, 0x1);
+    
+    ADC_Raw_Data = EADC_GET_CONV_DATA(EADC, 0);
+
+    return ADC_Raw_Data;
+}
+/*-----------------------------------------------------------*/
+void vTaskADCKnob(unsigned portBASE_TYPE uxPriority, void * pvArg )
+{
+	xTaskCreate(vADCKnobTask,
+				( signed char * )"ADC_KNOB",
+				200,
+				pvArg,
+				uxPriority,
+				&xADCKnobHandle);
+}
+
+/*-----------------------------------------------------------*/
+static void vADCKnobTask(void *pvParameters)
+{
+    portTickType  xLastWakeTime;
+    uint32_t adcValue;      
+    const portTickType xFrequency = pollADC_RATE_BASE; 
+
+    InitAdcKnob();
+#if dbgADC_KNOB
+    printf("[ADC]: ADC Knob Task Initialize...\n");
+#endif    
+
+    xLastWakeTime = xTaskGetTickCount();
+
+    for(;;)
+    {
+        /* Clear the A/D ADI NT0 interrupt flag */
+        EADC_CLR_INT_FLAG(EADC, 0x1);
+        
+        /* Trigger sample module 0 to start A/D conversion */
+        EADC_START_CONV(EADC, 0x1);
+
+        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+        adcValue = getADCKnob();
+    #if ledADC_KNOB    
+    	/* Turn on LED based on Volume */
+		showNuEduLED(adcValue);
+    #endif    
+    #if dbgADC_KNOB
+        printf("[ADC]: The ADC value is %d\n",adcValue );
+    #endif
+    }     
+} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

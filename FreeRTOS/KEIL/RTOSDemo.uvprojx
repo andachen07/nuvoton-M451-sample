@@ -414,39 +414,49 @@
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\PollQ.c</FilePath>
             </File>
             <File>
+              <FileName>taskADCKnob.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskADCKnob.c</FilePath>
+            </File>
+            <File>
               <FileName>taskLed7Segm.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskLed7Segm.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskLed7Segm.c</FilePath>
             </File>
             <File>
               <FileName>taskLedToggle.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskLedToggle.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskLedToggle.c</FilePath>
             </File>
             <File>
-              <FileName>taskTimer1.c</FileName>
+              <FileName>taskPWMDAC.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskTimer1.c</FilePath>
-            </File>
-            <File>
-              <FileName>taskWatchdog.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskWatchdog.c</FilePath>
-            </File>
-            <File>
-              <FileName>taskWWatchdog.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskWWatchdog.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskPWMDAC.c</FilePath>
             </File>
             <File>
               <FileName>taskRTC.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskRTC.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskRTC.c</FilePath>
             </File>
             <File>
-              <FileName>taskADCKnob.c</FileName>
+              <FileName>taskTimer1.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskADCKnob.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskTimer1.c</FilePath>
+            </File>
+            <File>
+              <FileName>taskWatchdog.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskWatchdog.c</FilePath>
+            </File>
+            <File>
+              <FileName>taskWWatchdog.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskWWatchdog.c</FilePath>
+            </File>
+            <File>
+              <FileName>userLED.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\userLED.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -537,6 +547,11 @@
               <FileName>eadc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Library\StdDriver\src\eadc.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Library\StdDriver\src\pwm.c</FilePath>
             </File>
           </Files>
         </Group>

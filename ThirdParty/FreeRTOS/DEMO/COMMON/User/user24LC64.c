@@ -96,139 +96,110 @@
 /* Demo program include files. */
 #include "userTimer.h"
 #include "userMain.h"
-#include "userLed.h"
 
 #include "M451Series.h"
-#include "NuEdu-Basic01.h"
 
-#define pollADC_RATE_BASE      3000
+#define I2C_EEPROM_ADR      0x50
 
-static void vPWMDACTask(void *pvParameters);
+#define I2C_READ_BYTE       0x02 
+#define I2C_WRITE_BYTE      0x03 
+#define I2C_READ_WORD       0x04 
+#define I2C_WRITE_WORD      0x05 
+#define I2C_READ_BLOCK      0x10 
+#define I2C_WRITE_BLOCK     0x11 
 
-/*---------------------------------------------------------------------------------------------------------*/
-/*  Initialize ADC Knob GPIO                                                                               */
-/*---------------------------------------------------------------------------------------------------------*/
-void InitADC7GPIO(void)
-{
-    /* Configure the GPB9 for ADC analog input pins.  */
-    SYS->GPB_MFPH &= ~(SYS_GPB_MFPH_PB10MFP_Msk );
-    SYS->GPB_MFPH |= (SYS_GPB_MFPH_PB10MFP_EADC_CH7);
+static void vI2cEepromTask(void *pvParameters);
+static xTaskHandle xTimer1Handle;
 
-    /* Disable the GPB9 digital input path to avoid the leakage current. */
-    GPIO_DISABLE_DIGITAL_PATH(PB, BIT10);
-}
+struct _I2cDeviceInfo {
+    uint8_t         i2cDevAddr;
+    uint16_t        i2cRegAddr;
+    uint8_t         i2cProtocol;
+    uint8_t         i2cWrLen;
+    uint8_t         i2cRdLen;
+    uint8_t         i2cWrData[32];
+    uint8_t         i2cRdData[32];
+};
 
-void InitADCModule(void)
-{
-    /* Set the ADC internal sampling time, input mode as single-end and enable the A/D converter */
-    EADC_Open(EADC, EADC_CTL_DIFFEN_SINGLE_END);
-    EADC_SetInternalSampleTime(EADC, 6);
 
-    /* Configure the sample module 0 for analog input channel 6 and software trigger source */
-    EADC_ConfigSampleModule(EADC, 1, EADC_SOFTWARE_TRIGGER, 7);
-	
-    /* Enable sample module 0 interrupt */
-    EADC_ENABLE_SAMPLE_MODULE_INT(EADC, 1, 0x2);
 
-    /* Clear the A/D ADINT0 interrupt flag for safe */
-    EADC_CLR_INT_FLAG(EADC, 0x2);
+#define I2CRegLen   6
+const struct _I2cDeviceInfo I2c24LC64CtrlCode[I2CRegLen] = {
+    {   I2C_EEPROM_ADR,             0x0010,
+        I2C_WRITE_BYTE,             0x01,   0x00,              	
+        {0xAA},                     NULL},
+    {   I2C_EEPROM_ADR,             0x0012,
+        I2C_WRITE_WORD,             0x02,   0x00,              	
+        {0xBB,0xCC},                NULL},
+    {   I2C_EEPROM_ADR,             0x0014,
+        I2C_WRITE_BLOCK,            0x04,   0x00,              	
+        {0x5A,0xDD,0xEE,0xA5},      NULL},
+    {   I2C_EEPROM_ADR,             0x0010,
+        I2C_READ_BYTE,              0x00,   0x01,              	
+        NULL,                       (0xAA)},
+    {   I2C_EEPROM_ADR,             0x0012,
+        I2C_READ_WORD,              0x00,   0x02,              	
+        NULL,                       (0xBB,0xCC)},
+    {   I2C_EEPROM_ADR,             0x0014,
+        I2C_READ_BLOCK,             0x00,   0x04,              	
+        NULL,                       (0x5A,0xDD,0xEE,0xA5)},
+};
 
-    /* Enable the sample module 0 A/D ADINT0 interrupt */
-    EADC_ENABLE_INT(EADC, 0x2);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-/*  Initialize PWM module                                                                                  */
-/*---------------------------------------------------------------------------------------------------------*/
-void InitPWM1GPIO(void)
-{
-    /* Set PC9~PC11 multi-function pins for PWM1 Channel0~2  */
-    SYS->GPC_MFPH &= ~(SYS_GPC_MFPH_PC9MFP_Msk | SYS_GPC_MFPH_PC10MFP_Msk | SYS_GPC_MFPH_PC11MFP_Msk);
-    SYS->GPC_MFPH |= SYS_GPC_MFPH_PC9MFP_PWM1_CH0 | SYS_GPC_MFPH_PC10MFP_PWM1_CH1 | SYS_GPC_MFPH_PC11MFP_PWM1_CH2;
 
-    GPIO_SetMode(PC, BIT13, GPIO_MODE_INPUT); //avoid to pwm dac out
-    SYS->GPC_MFPH &= ~SYS_GPC_MFPH_PC13MFP_Msk ;
-    SYS->GPC_MFPH |= SYS_GPC_MFPH_PC13MFP_PWM1_CH4;
-
-}
 /*-----------------------------------------------------------*/
-void writePWMDAC(unsigned char Enable, unsigned char ch0_dut)
+void vTaskI2cEeprom(unsigned portBASE_TYPE uxPriority, void * pvArg )
 {
-    /* set PWMB channel 0 output configuration */
-    PWM_ConfigOutputChannel(PWM1, 4, 1000, ch0_dut);
-
-    // Start PWM COUNT
-    PWM_Start(PWM1, 1 << 4);
-
-    if(Enable == 0)
-        /* Enable PWM Output path for PWMB channel 0 */
-        PWM_DisableOutput(PWM1, 1 << 4);
-    else
-        /* Diable PWM Output path for PWMB channel 0 */
-        PWM_EnableOutput(PWM1, 1 << 4);
-}
-/*-----------------------------------------------------------*/
-void InitPWMModule(uint32_t pwmValue)
-{
-    /* Reset PWM1 channel 0~5 */
-    SYS_ResetModule(PWM1_RST);
-    writePWMDAC(1,pwmValue);
-}
-/*-----------------------------------------------------------*/
-uint32_t GetAdcPWMDAC(void)
-{
-    uint32_t ADC_Raw_Data;
-
-    /* Wait ADC interrupt (g_u32AdcIntFlag will be set at IRQ_Handler function) */
-    while(EADC_GET_INT_FLAG(EADC, 0x2) == 0);
-    ADC_Raw_Data = EADC_GET_CONV_DATA(EADC, 1);
-
-    return ADC_Raw_Data;
-}
-/*-----------------------------------------------------------*/
-void vTaskPWMDAC(unsigned portBASE_TYPE uxPriority, void * pvArg )
-{
-	xTaskCreate(vPWMDACTask,
-				( signed char * )"PWM_DAC",
+	xTaskCreate(vI2cEepromTask,
+				( signed char * )"TIM1_ISR",
 				200,
 				pvArg,
 				uxPriority,
-				NULL);
+				&xTimer1Handle);
 }
 
 /*-----------------------------------------------------------*/
-static void vPWMDACTask(void *pvParameters)
+static void vI2cEepromTask(void *pvParameters)
 {
-    portTickType  xLastWakeTime;
-    uint32_t pwmValue = 0, adcValue;      
-    const portTickType xFrequency = pollADC_RATE_BASE; 
+    struct _I2cControlInfo * i2c24L64DevInfo = (struct _I2cControlInfo *)pvParameters;
+    int CtrlCodeLen = 0, i=0;
 
-    InitADCModule();
-    InitPWMModule(pwmValue);
-#if dbgPWM_DAC
-    printf("[PWM]: PWM DAC Task Initialize...\n");
+#if dbgI2C1
+    printf("[I2C]: 24L64 device initialize...\n"));
 #endif    
-
-	xLastWakeTime = xTaskGetTickCount();
 
     for(;;)
     {
-        /* Clear the A/D ADI NT0 interrupt flag */
-        EADC_CLR_INT_FLAG(EADC, 0x2);
+        i2c24L64DevInfo->i2cSlaveAddr = I2c24LC64CtrlCode[CtrlCodeLen].i2cDevAddr
+        i2c24L64DevInfo->i2cTxLen = 0x02;
+        i2c24L64DevInfo->i2cTxData[0] = (uint8_t)(I2c24LC64CtrlCode[CtrlCodeLen].i2cRegAddr >> 8);
+        i2c24L64DevInfo->i2cTxData[1] = (uint8_t)(I2c24LC64CtrlCode[CtrlCodeLen].i2cRegAddr;
+        switch((I2c24LC64CtrlCode[CtrlCodeLen].i2cProtocol)
+        {
+        case I2C_WRITE_BYTE:
+        case I2C_WRITE_BYTE:
+        case I2C_WRITE_BLOCK:
+            i2c24L64DevInfo.i2cTxLen += I2c24LC64CtrlCode[CtrlCodeLen].i2cWrLen;
+            for(i=0;i<I2c24LC64CtrlCode[CtrlCodeLen].i2cWrLen;i++)
+                i2c24L64DevInfo->i2cTxData[2+i] = I2c24LC64CtrlCode[CtrlCodeLen].i2cWrData[i];
+            /* I2C as master sends START signal */
+            I2C_SET_CONTROL_REG(I2C_EEPROM, I2C_CTL_STA);
 
-        //Trigger sample module 0 to start A/D conversion
-        EADC_START_CONV(EADC, 0x2);
+            /* Wait I2C Tx Finish */
+            while(g_u8EndFlag == 0);           
+            break;
+        case I2C_READ_BYTE:
+        case I2C_READ_BYTE:
+        case I2C_READ_BLOCK:
+            i2c24L64DevInfo.i2cTxLen += I2c24LC64CtrlCode[CtrlCodeLen].i2cWrLen;
+            i2c24L64DevInfo.i2cRxLen = I2c24LC64CtrlCode[CtrlCodeLen].i2cRdLen;
+            /* I2C as master sends START signal */
+            I2C_SET_CONTROL_REG(I2C_EEPROM, I2C_CTL_STA);
 
-        vTaskDelayUntil( &xLastWakeTime, xFrequency );
-        //Get Volume Knob Data
-        adcValue = GetAdcPWMDAC();			// Volume Range: 0 ~ 4095
-        showNuEduLED((adcValue * (8 + 1) / 4096));
-        writePWMDAC(1,pwmValue++);
-        if(pwmValue>100)
-            pwmValue = 0;
-    #if dbgPWM_DAC
-        printf("[PWM]: The ADC value is %d\n",adcValue );
-        printf("[PWM]: The PWM value is %d\n",pwmValue );
-    #endif    
+            /* Wait I2C Tx Finish */
+            while(g_u8EndFlag == 0);
+
+            break;
+			}
     }     
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

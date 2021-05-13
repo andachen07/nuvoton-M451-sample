@@ -75,12 +75,6 @@
 #ifndef USER_LED_H
 #define USER_LED_H
 
-void InitAdcKnobGPIO(void);
-void vTaskToggleLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
-void vTaskSegmLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
-void vTaskADCKnob(unsigned portBASE_TYPE uxPriority, void * pvArg );
-void vTaskPWMDAC(unsigned portBASE_TYPE uxPriority, void * pvArg );
-
 void InitNuEduLED(void);
 void showNuEduLED(uint32_t input_value);
 

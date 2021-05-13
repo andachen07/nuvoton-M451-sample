@@ -80,8 +80,9 @@
 #define WATCHDOG_ON                 0
 #define WWATCHDOG_ON                0
 #define RTC_ON                      1
-#define ADC_KNOB_ON                 0
-#define PWM_DAC_ON                  1    
+#define ADC_CH6_ON                  0
+#define PWMB_CH0_ON                  0
+#define I2C1_ON                     1    
 
 // debug message control
 #define dbgTOGGLE_LED               0    
@@ -91,11 +92,28 @@
 #define dbgWWATCHDOG                0
 #define dbgRTC                      1 
 #define dbgADC_KNOB                 0
-#define dbgPWM_DAC                  1
+#define dbgPWM_DAC                  0
+#define dbgI2C                      1
 
 // LED function control
 #define ledPWM_DAC                  1
 #define ledADC_KNOB                 0
 #define ledLED_TOG                  0
+
+void vTaskToggleLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
+void vTaskSegmLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
+void vTaskADCKnob(unsigned portBASE_TYPE uxPriority, void * pvArg );
+void vTaskPWMDAC(unsigned portBASE_TYPE uxPriority, void * pvArg );
+void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+void vTaskRTC(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+void vTaskI2C1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
+void vTaskI2cEeprom(unsigned portBASE_TYPE uxPriority, void * pvArg );
+
+extern void TMR1_IRQHandler(void);
+extern void WDT_IRQHandler(void);
+extern void WWDT_IRQHandler(void);
+extern void RTC_IRQHandler(void);
 #endif
 

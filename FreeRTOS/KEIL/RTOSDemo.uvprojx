@@ -396,7 +396,7 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>Demo Files</GroupName>
+          <GroupName>UserFiles</GroupName>
           <Files>
             <File>
               <FileName>main.c</FileName>
@@ -457,6 +457,16 @@
               <FileName>userLED.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\userLED.c</FilePath>
+            </File>
+            <File>
+              <FileName>taskI2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskI2c.c</FilePath>
+            </File>
+            <File>
+              <FileName>user24LC64.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\user24LC64.c</FilePath>
             </File>
           </Files>
         </Group>

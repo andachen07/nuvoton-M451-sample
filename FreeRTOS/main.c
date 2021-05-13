@@ -180,23 +180,23 @@
 #include "NuEdu-Basic01.h"
 
 #define PLL_CLOCK                           72000000
- 
 
 /* Priorities for the demo application tasks. */
 #define mainFLOP_TASK_PRIORITY              ( tskIDLE_PRIORITY )
-#define mainTOGGLE_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
+#define mainGPIOB_CH2_TASK_PRIORITY         ( tskIDLE_PRIORITY + 1UL )
 #define mainUSERIF_TASK_PRIORITY            ( tskIDLE_PRIORITY + 3UL )
 #define mainSEGLED_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
 #define mainQUEUE_POLL_PRIORITY             ( tskIDLE_PRIORITY + 2UL )
 #define mainSEM_TEST_PRIORITY               ( tskIDLE_PRIORITY + 1UL )
 #define mainBLOCK_Q_PRIORITY                ( tskIDLE_PRIORITY + 2UL )
 #define mainCREATOR_TASK_PRIORITY           ( tskIDLE_PRIORITY + 3UL )
-#define mainTIMER1_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
+#define mainTIMER_CH1_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 #define mainWATCHDOG_TASK_PRIORITY			( tskIDLE_PRIORITY + 1UL )
 #define mainWWATCHDOG_TASK_PRIORITY		    ( tskIDLE_PRIORITY + 1UL )
 #define mainRTC_TASK_PRIORITY		        ( tskIDLE_PRIORITY + 1UL )
-#define mainADCKNOB_TASK_PRIORITY           ( tskIDLE_PRIORITY + 1UL )
-#define mainPWMDAC_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
+#define mainADC_CH6_TASK_PRIORITY           ( tskIDLE_PRIORITY + 1UL )
+#define mainPWMB_CH0_TASK_PRIORITY          ( tskIDLE_PRIORITY + 1UL )
+#define mainI2C_CH1_TASK_PRIORITY           ( tskIDLE_PRIORITY + 1UL )
 
 /* The time between cycles of the 'check' task. */
 #define mainUSERIF_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
@@ -224,7 +224,8 @@ information. */
 typedef void (*TaskFunction_t)(void *pvParameters);
 
 static void vUserIFTask(void *pvParameters);
-static int segLedValue = 0, adcLevel = 0;
+static int segLedValue = 0;
+static struct _I2cControlInfo * xI2cControlInfo;
 
 struct _TaskListTbl {
     TaskFunction_t          		pvTaskCode;
@@ -268,9 +269,9 @@ int main(void)
                     TaskListTbl[TaskIndex].pxCreatedTask);
     }
 
-    vTaskToggleLED(mainTOGGLE_TASK_PRIORITY , (void *) NULL);
+    vTaskToggleLED(mainGPIOB_CH2_TASK_PRIORITY , (void *) NULL);
     vTaskSegmLED(mainSEGLED_TASK_PRIORITY, (void *)&segLedValue);
-    vTaskTimer1(mainTIMER1_TASK_PRIORITY, (void *)&segLedValue);
+    vTaskTimer1(mainTIMER_CH1_TASK_PRIORITY, (void *)&segLedValue);
 #if WATCHDOG_ON 
     vTaskWatchdog(mainWATCHDOG_TASK_PRIORITY , (void *) NULL);
 #endif
@@ -280,11 +281,15 @@ int main(void)
 #if RTC_ON
     vTaskRTC(mainRTC_TASK_PRIORITY , (void *) NULL);
 #endif
-#if ADC_KNOB_ON
-    vTaskADCKnob(mainADCKNOB_TASK_PRIORITY , (void *)&adcLevel );
+#if ADC_CH6_ON
+    vTaskADCKnob(mainADC_CH6_TASK_PRIORITY , (void *) NULL );
 #endif
-#if PWM_DAC_ON
-    vTaskPWMDAC(mainPWMDAC_TASK_PRIORITY , (void *)&adcLevel);
+#if PWMB_CH0_ON
+    vTaskPWMDAC(mainPWMB_CH0_TASK_PRIORITY , (void *) NULL);
+#endif
+#if I2C1_ON
+    vTaskI2C1(mainI2C_CH1_TASK_PRIORITY , (void *) &xI2cControlInfo);
+    vTaskI2cEeprom(mainI2C_CH1_TASK_PRIORITY , (void *) &xI2cControlInfo);
 #endif
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
@@ -347,11 +352,11 @@ static void prvSetupHardware(void)
 #if WWATCHDOG_ON
     CLK_SetModuleClock(WWDT_MODULE, CLK_CLKSEL1_WWDTSEL_LIRC, 0);
 #endif
-#if ADC_KNOB_ON
+#if ADC_CH6_ON
     /* EADC clock source is HCLK(72MHz), set divider to 8, ADC clock is 72/8 MHz */
     CLK_SetModuleClock(EADC_MODULE, 0, CLK_CLKDIV0_EADC(8));
 #endif
-#if PWM_DAC_ON
+#if PWMB_CH0_ON
     /* EADC clock source is HCLK(72MHz), set divider to 8, ADC clock is 72/8 MHz */
     CLK_SetModuleClock(EADC_MODULE, 0, CLK_CLKDIV0_EADC(8));
     /* Select PWM module clock source */
@@ -373,15 +378,19 @@ static void prvSetupHardware(void)
 #if RTC_ON
     CLK_EnableModuleClock(RTC_MODULE);
 #endif
-#if ADC_KNOB_ON
+#if ADC_CH6_ON
     /* Enable EADC module clock */
     CLK_EnableModuleClock(EADC_MODULE);
 #endif
-#if PWM_DAC_ON
+#if PWMB_CH0_ON
     /* Enable EADC module clock */
     CLK_EnableModuleClock(EADC_MODULE);
     /* Enable PWM module clock */
     CLK_EnableModuleClock(PWM1_MODULE);
+#endif
+#if I2C1_ON
+    /* Enable I2C1 module clock */
+    CLK_EnableModuleClock(I2C1_MODULE);    
 #endif
 
     /* Update System Core Clock */
@@ -439,16 +448,17 @@ static void prvSetupHardware(void)
     /* Enable RTC NVIC */
     NVIC_EnableIRQ(RTC_IRQn);
 #endif
-#if ADC_KNOB_ON
+#if ADC_CH6_ON
     /* Init GPIO */
-    InitAdcKnobGPIO();
+    InitADC6GPIO();
 #endif
-
-#if PWM_DAC_ON
-    InitPWMDACGPIO();
-    InitPWMADCGPIO();
+#if PWMB_CH0_ON
+    InitPWM1GPIO();
+    InitADC7GPIO();
 #endif
-
+#if I2C1_ON
+    InitI2C1GPIO();
+#endif
     /* Init GPIO for LEDs */
     InitNuEduLED();
 

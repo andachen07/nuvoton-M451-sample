@@ -109,7 +109,7 @@ static xTaskHandle xADCKnobHandle;
 /*---------------------------------------------------------------------------------------------------------*/
 /*  Initialize ADC Knob GPIO                                                                               */
 /*---------------------------------------------------------------------------------------------------------*/
-void InitAdcKnobGPIO(void)
+void InitADC6GPIO(void)
 {
     /* Configure the GPB9 for ADC analog input pins.  */
     SYS->GPB_MFPH &= ~(SYS_GPB_MFPH_PB9MFP_Msk );

@@ -75,17 +75,18 @@
 #ifndef USER_TIMER_H
 #define USER_TIMER_H
 
-void InitPWMDACGPIO(void);
-void InitPWMADCGPIO(void);
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskWWatchdog(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-void vTaskRTC(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-extern void TMR1_IRQHandler(void);
-extern void WDT_IRQHandler(void);
-extern void WWDT_IRQHandler(void);
-extern void RTC_IRQHandler(void);
+struct _I2cControlInfo {
+    uint32_t        i2cStatus;
+    uint8_t         i2cSlaveAddr;
+    uint8_t         i2cRxLen;
+    uint8_t         i2cTxLen;
+    uint8_t         i2cRxData[35];
+    uint8_t         i2cTxData[35];
+};
 
-
+void InitPWM1GPIO(void);
+void InitADC7GPIO(void);
+void InitADC6GPIO(void);
+void InitI2C1GPIO(void);
 #endif
 

@@ -135,6 +135,8 @@ void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg )
 /*-----------------------------------------------------------*/
 static void vTimer1Task(void *pvParameters)
 {
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
     /* Start Timer 1 */
     TIMER_Start(TIMER1);
 
@@ -142,11 +144,14 @@ static void vTimer1Task(void *pvParameters)
     {
         vTaskSuspend(NULL);
         segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
-        if(xQueueSend(xTimerQueue,
+        if(xQueueSendFromISR(xTimerQueue,
                     (void *)&segLedValue,
-                    (portTickType)100) != pdPASS ) {
+                    &xHigherPriorityTaskWoken) != pdPASS ) 
+        {
             printf("[TIM]: Add Timer-Queue failure...\n" );
-        } else {
+        } 
+        else 
+        {
             printf("[TIM]: Add Timer-Queue is %d\n",segLedValue );
         }
     }     

@@ -153,10 +153,15 @@ static void vSegLedTask(void *pvParameters)
 		xResult = xQueueReceive(xTimerQueue,                /* Handle of Queue */
 		                    (void *)&segmLedValue,          /* Receive data from Queue */
 		                    (portTickType)xMaxBlockTime);   /* timeout value */
+
 		if(xResult == pdPASS)
 		{
             printf("[TIM]: Receive Queue %d \n",segmLedValue );
 		}
+        else
+        {
+            /* TODO : Timeout */    
+        }
 
         segLedShow = (segLedShow + 1) % 1000;
         segmLedDisplay(segLedShow, segmLedValue);

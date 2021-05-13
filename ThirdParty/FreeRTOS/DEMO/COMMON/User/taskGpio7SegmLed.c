@@ -92,6 +92,7 @@
 /* Scheduler include files. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
 /* Demo program include files. */
 #include "userMain.h"
@@ -100,10 +101,10 @@
 #include "M451Series.h"
 #include "NuEdu-Basic01.h"
 
-#define ledFLASH_RATE_BASE      10
+
 static int segLedShow = 0;
 static void vSegLedTask(void *pvParameters);
-static int segmLedValue; 
+static uint8_t segmLedValue; 
 
 /*-----------------------------------------------------------*/
 void vTaskGpioSegmLed(unsigned portBASE_TYPE uxPriority, void * pvArg)
@@ -120,7 +121,7 @@ void segmLedDisplay(int segLedShow,int segLedValue)
 {
     /* Initi GPIO for 7-segment LEDs */
     Open_Seven_Segment();
-    
+
 #if dbgGPIO_7SEGM_LED    
     printf("The 7-Seg LED value is %d \n",segLedValue );
 #endif
@@ -144,22 +145,19 @@ void segmLedDisplay(int segLedShow,int segLedValue)
 
 static void vSegLedTask(void *pvParameters)
 {
-    portTickType  xLastWakeTime;
-    const portTickType xFrequency = ledFLASH_RATE_BASE; 
-
-
-
-	/* We need to initialise xLastFlashTime prior to the first call to 
-	vTaskDelayUntil(). */
-	xLastWakeTime = xTaskGetTickCount();
+    const portTickType xMaxBlockTime = 20;  /* Max wait receive time */ 
+    portBASE_TYPE xResult;
 
 	for(;;)
 	{
-	    /* The parameters are not used. */
-	    segmLedValue = *(int *)pvParameters;        
-		
-        /* Delay for half the flash period then turn the LED on. */
-		vTaskDelayUntil( &xLastWakeTime, xFrequency );
+		xResult = xQueueReceive(xTimerQueue,                /* Handle of Queue */
+		                    (void *)&segmLedValue,          /* Receive data from Queue */
+		                    (portTickType)xMaxBlockTime);   /* timeout value */
+		if(xResult == pdPASS)
+		{
+            printf("[TIM]: Receive Queue %d \n",segmLedValue );
+		}
+
         segLedShow = (segLedShow + 1) % 1000;
         segmLedDisplay(segLedShow, segmLedValue);
 	}

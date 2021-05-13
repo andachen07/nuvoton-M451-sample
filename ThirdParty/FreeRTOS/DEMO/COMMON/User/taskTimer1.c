@@ -92,6 +92,7 @@
 /* Scheduler include files. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
 /* Demo program include files. */
 #include "userMain.h"
@@ -102,7 +103,7 @@
 
 static void vTimer1Task(void *pvParameters);
 static xTaskHandle xTimer1Handle;
-static int segLedValue;
+static uint8_t segLedValue = 0;
 
 /*---------------------------------------------------------------------------------------------------------*/
 /*  TMR0 IRQ handler                                                                                       */
@@ -128,7 +129,6 @@ void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg )
 
 //		if(xResult == pdPASS)
 //		{
-//			vTaskSuspend(xTimer1Handle);
 //		}
 }
 
@@ -137,14 +137,18 @@ static void vTimer1Task(void *pvParameters)
 {
     /* Start Timer 1 */
     TIMER_Start(TIMER1);
-    segLedValue = *(int *)pvParameters;
 
     for(;;)
     {
         vTaskSuspend(NULL);
         segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
-        *(int *)pvParameters = segLedValue;
-        printf("Timer 1 value is %d\n",segLedValue );
+        if(xQueueSend(xTimerQueue,
+                    (void *)&segLedValue,
+                    (portTickType)100) != pdPASS ) {
+            printf("[TIM]: Add Timer-Queue failure...\n" );
+        } else {
+            printf("[TIM]: Add Timer-Queue is %d\n",segLedValue );
+        }
     }     
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

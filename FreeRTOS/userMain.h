@@ -72,15 +72,16 @@
     mission critical applications that require provable dependability.
 */
 
-#ifndef LED_H
-#define LED_H
+#ifndef USER_MAIN_H
+#define USER_MAIN_H
 
+#include "queue.h"
 
 // module enable control
 #define TIMER1_ON                   1
 
 // debug message control
-#define dbgGPIO_TOGGLE              1    
+#define dbgGPIO_TOGGLE              0    
 #define dbgGPIO_7SEGM_LED           0 
 #define dbgTIMER1                   1 
 
@@ -88,5 +89,6 @@ void vTaskGpioToggle(unsigned portBASE_TYPE uxPriority, void * pvArg );
 void vTaskGpioSegmLed(unsigned portBASE_TYPE uxPriority, void * pvArg );
 void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
 
+extern xQueueHandle xTimerQueue;
 #endif
 

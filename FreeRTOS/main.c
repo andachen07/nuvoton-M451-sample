@@ -156,6 +156,7 @@
 #include "task.h"
 #include "timers.h"
 #include "semphr.h"
+#include "queue.h"
 
 /* Demo application includes. */
 #include "partest.h"
@@ -217,7 +218,9 @@ information. */
 typedef void (*TaskFunction_t)(void *pvParameters);
 
 static void vUserIFTask(void *pvParameters);
-static int segLedValue = 0;
+
+xQueueHandle xTimerQueue = NULL;
+#define xTimerQueueLen              10
 
 struct _TaskListTbl {
     TaskFunction_t          		pvTaskCode;
@@ -228,7 +231,7 @@ struct _TaskListTbl {
     xTaskHandle *          			pxCreatedTask;
 };
 
-#define TaskNum 1
+#define TaskNum                     1
 const struct _TaskListTbl TaskListTbl[TaskNum] = {
     {   vUserIFTask,                ( signed char * )"LED_USERIF",              	
         configMINIMAL_STACK_SIZE,   NULL,           
@@ -236,36 +239,24 @@ const struct _TaskListTbl TaskListTbl[TaskNum] = {
 };
 
 /*-----------------------------------------------------------*/
-
 /*
  * Set up the hardware ready to run this demo.
  */
 static void prvSetupHardware(void);
+/*
+ * 
+ */
+static void vStartTaskCreate(void);
 /*-----------------------------------------------------------*/
-
 int main(void)
 {
-    unsigned TaskIndex = 0;
     /* Configure the hardware ready to run the test. */
     prvSetupHardware();
 
     printf("Hardware configuration done ...\n");
 	
-	  for(TaskIndex=0;TaskIndex<TaskNum;TaskIndex++)
-    {
-        xTaskCreate(TaskListTbl[TaskIndex].pvTaskCode, 
-                    TaskListTbl[TaskIndex].pcName, 
-                    TaskListTbl[TaskIndex].usStackDepth, 
-                    TaskListTbl[TaskIndex].pvParameters, 
-                    TaskListTbl[TaskIndex].uxPriority, 
-                    TaskListTbl[TaskIndex].pxCreatedTask);
-    }
-
-    vTaskGpioToggle(mainGPIOB_CH2_TASK_PRIORITY , (void *) NULL);
-    vTaskGpioSegmLed(mainSEGLED_TASK_PRIORITY, (void *)&segLedValue);
-#if TIMER1_ON    
-    vTaskTimer1(mainTIMER_CH1_TASK_PRIORIT, (void *)&segLedValue);
-#endif
+    vStartTaskCreate();
+    
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
     /* The following function will only create more tasks and timers if
@@ -285,8 +276,6 @@ int main(void)
     for more details. */
     for(;;);
 }
-
-
 /*-----------------------------------------------------------*/
 static void prvSetupHardware(void)
 {
@@ -343,8 +332,8 @@ static void prvSetupHardware(void)
     SYS_LockReg();
 
 #if TIMER1_ON
-    //Initial Timer1 to periodic mode with 2Hz
-    TIMER_Open(TIMER1, TIMER_PERIODIC_MODE, 2);
+    //Initial Timer1 to periodic mode with 1Hz
+    TIMER_Open(TIMER1, TIMER_PERIODIC_MODE, 1);
 
 	/* Enable Timer 0 interrupt */
     TIMER_EnableInt(TIMER1);
@@ -356,7 +345,6 @@ static void prvSetupHardware(void)
 
 }
 /*-----------------------------------------------------------*/
-
 void vApplicationMallocFailedHook(void)
 {
     /* vApplicationMallocFailedHook() will only be called if
@@ -373,7 +361,6 @@ void vApplicationMallocFailedHook(void)
     for(;;);
 }
 /*-----------------------------------------------------------*/
-
 void vApplicationIdleHook(void)
 {
     /* vApplicationIdleHook() will only be called if configUSE_IDLE_HOOK is set
@@ -387,7 +374,6 @@ void vApplicationIdleHook(void)
     memory allocated by the kernel to any task that has since been deleted. */
 }
 /*-----------------------------------------------------------*/
-
 void vApplicationStackOverflowHook(xTaskHandle pxTask, signed char *pcTaskName)
 {
     (void) pcTaskName;
@@ -400,7 +386,6 @@ void vApplicationStackOverflowHook(xTaskHandle pxTask, signed char *pcTaskName)
     for(;;);
 }
 /*-----------------------------------------------------------*/
-
 void vApplicationTickHook(void)
 {
     /* This function will be called by each tick interrupt if
@@ -437,6 +422,31 @@ static void vUserIFTask(void *pvParameters)
     }
 }
 /*-----------------------------------------------------------*/
+static void vStartTaskCreate(void)
+{
+    int TaskLen = 0;
 
+	for(TaskLen=0;TaskLen<TaskNum;TaskLen++)
+    {
+        xTaskCreate(TaskListTbl[TaskLen].pvTaskCode, 
+                    TaskListTbl[TaskLen].pcName, 
+                    TaskListTbl[TaskLen].usStackDepth, 
+                    TaskListTbl[TaskLen].pvParameters, 
+                    TaskListTbl[TaskLen].uxPriority, 
+                    TaskListTbl[TaskLen].pxCreatedTask);
+    }
 
+    vTaskGpioToggle(mainGPIOB_CH2_TASK_PRIORITY , (void *) NULL);
+    vTaskGpioSegmLed(mainSEGLED_TASK_PRIORITY, (void *) NULL);
+#if TIMER1_ON    
+    vTaskTimer1(mainTIMER_CH1_TASK_PRIORIT, (void *) NULL);
+#endif
+
+	/* Create Timer Queue and Queue size is 10 bytes */
+	xTimerQueue = xQueueCreate(xTimerQueueLen, sizeof(uint8_t));
+    if( xTimerQueue == 0 )
+    {
+        /* TODO : Queue create fail */
+    }
+}
 

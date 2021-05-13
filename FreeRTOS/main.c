@@ -453,7 +453,7 @@ static void vStartTaskCreate(void)
 
     
 	/* Create binary semaphore and the counter is 0 when create  */
-	vSemaphoreCreateBinary(xTimerSemaphore);
+	xTimerSemaphore = xSemaphoreCreateCounting(1,0);
 	
 	if(xTimerSemaphore == NULL)
     {

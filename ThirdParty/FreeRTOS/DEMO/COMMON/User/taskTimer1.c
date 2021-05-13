@@ -94,65 +94,57 @@
 #include "task.h"
 
 /* Demo program include files. */
-#include "led.h"
+#include "userMain.h"
+#include "userLed.h"
 
 #include "M451Series.h"
-#include "NuEdu-Basic01.h"
 
-#define ledFLASH_RATE_BASE      500
-static int segLedShow = 0;
-static void vSegLedTask(void *pvParameters);
-static int segmLedValue; 
 
-/*-----------------------------------------------------------*/
-void vTaskSegmLED(unsigned portBASE_TYPE uxPriority, void * pvArg)
+static void vTimer1Task(void *pvParameters);
+static xTaskHandle xTimer1Handle;
+static int segLedValue;
+
+/*---------------------------------------------------------------------------------------------------------*/
+/*  TMR0 IRQ handler                                                                                       */
+/*---------------------------------------------------------------------------------------------------------*/
+void TMR1_IRQHandler(void)
 {
-    xTaskCreate(vSegLedTask,
-                ( signed char * )"LED_SEG",
-                configMINIMAL_STACK_SIZE,
-                pvArg,
-                uxPriority,
-                NULL);
+
+    // clear Timer0 interrupt flag
+    TIMER_ClearIntFlag(TIMER1);
+
+	xTaskResumeFromISR(xTimer1Handle);
 }
 /*-----------------------------------------------------------*/
-void segmLedDisplay(int segLedShow,int segLedValue)
+void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg )
 {
-    
-    printf("The 7-Seg LED value is %d \n",segLedValue );
+	portBASE_TYPE xResult;
+	xResult = xTaskCreate(vTimer1Task,
+						( signed char * )"TIM1_ISR",
+						200,
+						pvArg,
+						uxPriority,
+						&xTimer1Handle);
 
-    if(segLedShow % 2)
+//		if(xResult == pdPASS)
+//		{
+//			vTaskSuspend(xTimer1Handle);
+//		}
+}
+
+/*-----------------------------------------------------------*/
+static void vTimer1Task(void *pvParameters)
+{
+    /* Start Timer 1 */
+    TIMER_Start(TIMER1);
+    segLedValue = *(int *)pvParameters;
+
+    for(;;)
     {
-        printf("Show 7-Seg LED low byte \n");
-        Show_Seven_Segment((int)(segLedValue / 10), 1);
-    } 
-    else 
-    { 
-        printf("Show 7-Seg LED high byte \n");
-        Show_Seven_Segment((int)(segLedValue % 10), 2);
-    }
-}
-/*-----------------------------------------------------------*/
-
-static void vSegLedTask(void *pvParameters)
-{
-    portTickType  xLastWakeTime;
-    const portTickType xFrequency = ledFLASH_RATE_BASE; 
-
-
-
-	/* We need to initialise xLastFlashTime prior to the first call to 
-	vTaskDelayUntil(). */
-	xLastWakeTime = xTaskGetTickCount();
-
-	for(;;)
-	{
-	    /* The parameters are not used. */
-	    segmLedValue = *(int *)pvParameters;        
-		
-        /* Delay for half the flash period then turn the LED on. */
-		vTaskDelayUntil( &xLastWakeTime, xFrequency );
-        segLedShow = (segLedShow + 1) % 1000;
-        segmLedDisplay(segLedShow, segmLedValue);
-	}
+        vTaskSuspend(NULL);
+        segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
+        *(int *)pvParameters = segLedValue;
+        printf("Timer 1 value is %d\n",segLedValue );
+    }     
 } /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

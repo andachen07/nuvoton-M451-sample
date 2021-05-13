@@ -73,16 +73,8 @@
 */
 
 /**
- * This version of flash .c is for use on systems that have limited stack space
- * and no display facilities.  The complete version can be found in the 
- * Demo/Common/Full directory.
- * 
- * Three tasks are created, each of which flash an LED at a different rate.  The first 
- * LED flashes every 200ms, the second every 400ms, the third every 600ms.
- *
- * The LED flash tasks provide instant visual feedback.  They show that the scheduler 
- * is still operational.
- *
+ * @file    taskGpioToggle.c
+ * @brif    Toggle gpio port B.2 to turn on/off LED every 500ms  
  */
 
 
@@ -94,11 +86,12 @@
 #include "task.h"
 
 /* Demo program include files. */
-#include "led.h"
+#include "userMain.h"
+#include "userLed.h"
 
 #include "M451Series.h"
 
-#define ledFLASH_RATE_BASE	( ( portTickType ) 333 )
+#define ledFLASH_RATE_BASE	( ( portTickType ) 500 )
 #define partstMAX_LEDS      1
 #define partstFIRST_LED     (1<<2)     // PB.2
 
@@ -110,7 +103,7 @@ static volatile unsigned portBASE_TYPE uxFlashTaskNumber = 0;
 static void vLedToggleTask(void *pvParameters);
 
 /*-----------------------------------------------------------*/
-void vTaskToggleLED(unsigned portBASE_TYPE uxPriority, void * pvArg )
+void vTaskGpioToggle(unsigned portBASE_TYPE uxPriority, void * pvArg )
 {
     xTaskCreate(vLedToggleTask,
                 ( signed char * )"LED_TOGGLE",
@@ -135,13 +128,17 @@ void toggleLED(unsigned long ulLED)
             {
                 usOutputValue &= ~usBit;
                 PB2 = 0;
+            #if dbgGPIO_TOGGLE    
                 printf("PB.02 Output Lo\n");
+            #endif    
             }
             else
             {
                 usOutputValue |= usBit;
                 PB2 = 1;
+            #if dbgGPIO_TOGGLE    
                 printf("PB.02 Output Hi\n");
+            #endif    
             }
         }
         taskEXIT_CRITICAL();
@@ -156,7 +153,10 @@ static void vLedToggleTask(void *pvParameters)
 	/* The parameters are not used. */
 	( void ) pvParameters;
 
-	/* Calculate the LED and flash rate. */
+	/* Init GPIO */
+    GPIO_SetMode(PB, BIT2, GPIO_MODE_OUTPUT);
+
+    /* Calculate the LED and flash rate. */
 	portENTER_CRITICAL();
 	{
 		/* See which of the eight LED's we should use. */

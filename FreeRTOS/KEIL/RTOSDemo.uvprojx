@@ -414,19 +414,19 @@
               <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\PollQ.c</FilePath>
             </File>
             <File>
-              <FileName>taskLed7Segm.c</FileName>
+              <FileName>taskGpio7SegmLed.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskLed7Segm.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskGpio7SegmLed.c</FilePath>
             </File>
             <File>
-              <FileName>taskLedToggle.c</FileName>
+              <FileName>taskGpioToggle.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskLedToggle.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskGpioToggle.c</FilePath>
             </File>
             <File>
               <FileName>taskTimer1.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\Minimal\taskTimer1.c</FilePath>
+              <FilePath>..\..\ThirdParty\FreeRTOS\DEMO\COMMON\User\taskTimer1.c</FilePath>
             </File>
           </Files>
         </Group>

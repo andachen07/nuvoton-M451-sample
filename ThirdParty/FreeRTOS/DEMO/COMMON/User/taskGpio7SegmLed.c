@@ -72,14 +72,96 @@
     mission critical applications that require provable dependability.
 */
 
-#ifndef LED_H
-#define LED_H
+/**
+ * This version of flash .c is for use on systems that have limited stack space
+ * and no display facilities.  The complete version can be found in the 
+ * Demo/Common/Full directory.
+ * 
+ * Three tasks are created, each of which flash an LED at a different rate.  The first 
+ * LED flashes every 200ms, the second every 400ms, the third every 600ms.
+ *
+ * The LED flash tasks provide instant visual feedback.  They show that the scheduler 
+ * is still operational.
+ *
+ */
 
-void vTaskToggleLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
-void vTaskSegmLED(unsigned portBASE_TYPE uxPriority, void * pvArg );
-void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
-extern void TMR1_IRQHandler(void);
 
+#include <stdlib.h>
+#include <stdio.h>
 
+/* Scheduler include files. */
+#include "FreeRTOS.h"
+#include "task.h"
+
+/* Demo program include files. */
+#include "userMain.h"
+#include "userLed.h"
+
+#include "M451Series.h"
+#include "NuEdu-Basic01.h"
+
+#define ledFLASH_RATE_BASE      10
+static int segLedShow = 0;
+static void vSegLedTask(void *pvParameters);
+static int segmLedValue; 
+
+/*-----------------------------------------------------------*/
+void vTaskGpioSegmLed(unsigned portBASE_TYPE uxPriority, void * pvArg)
+{
+    xTaskCreate(vSegLedTask,
+                ( signed char * )"LED_SEG",
+                configMINIMAL_STACK_SIZE,
+                pvArg,
+                uxPriority,
+                NULL);
+}
+/*-----------------------------------------------------------*/
+void segmLedDisplay(int segLedShow,int segLedValue)
+{
+    /* Initi GPIO for 7-segment LEDs */
+    Open_Seven_Segment();
+    
+#if dbgGPIO_7SEGM_LED    
+    printf("The 7-Seg LED value is %d \n",segLedValue );
 #endif
+
+    if(segLedShow % 2)
+    {
+    #if dbgGPIO_7SEGM_LED
+        printf("Show 7-Seg LED low byte \n");
+    #endif
+        Show_Seven_Segment((int)(segLedValue / 10), 1);
+    } 
+    else 
+    {
+    #if dbgGPIO_7SEGM_LED     
+        printf("Show 7-Seg LED high byte \n");
+    #endif
+        Show_Seven_Segment((int)(segLedValue % 10), 2);
+    }
+}
+/*-----------------------------------------------------------*/
+
+static void vSegLedTask(void *pvParameters)
+{
+    portTickType  xLastWakeTime;
+    const portTickType xFrequency = ledFLASH_RATE_BASE; 
+
+
+
+	/* We need to initialise xLastFlashTime prior to the first call to 
+	vTaskDelayUntil(). */
+	xLastWakeTime = xTaskGetTickCount();
+
+	for(;;)
+	{
+	    /* The parameters are not used. */
+	    segmLedValue = *(int *)pvParameters;        
+		
+        /* Delay for half the flash period then turn the LED on. */
+		vTaskDelayUntil( &xLastWakeTime, xFrequency );
+        segLedShow = (segLedShow + 1) % 1000;
+        segmLedDisplay(segLedShow, segmLedValue);
+	}
+} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
 

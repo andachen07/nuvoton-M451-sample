@@ -159,7 +159,6 @@
 
 /* Demo application includes. */
 #include "partest.h"
-#include "led.h"
 #include "flop.h"
 #include "integer.h"
 #include "PollQ.h"
@@ -172,7 +171,8 @@
 #include "QueueSet.h"
 #include "recmutex.h"
 #include "death.h"
-#include "led.h"
+#include "userLed.h"
+#include "userMain.h"
 
 /* Hardware and starter kit includes. */
 #include "M451Series.h"
@@ -182,14 +182,14 @@
 
 /* Priorities for the demo application tasks. */
 #define mainFLOP_TASK_PRIORITY              ( tskIDLE_PRIORITY )
-#define mainTOGGLE_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
-#define mainUSERIF_TASK_PRIORITY             	( tskIDLE_PRIORITY + 3UL )
+#define mainGPIOB_CH2_TASK_PRIORITY         ( tskIDLE_PRIORITY + 1UL )
+#define mainUSERIF_TASK_PRIORITY            ( tskIDLE_PRIORITY + 3UL )
 #define mainSEGLED_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1UL )
 #define mainQUEUE_POLL_PRIORITY             ( tskIDLE_PRIORITY + 2UL )
 #define mainSEM_TEST_PRIORITY               ( tskIDLE_PRIORITY + 1UL )
 #define mainBLOCK_Q_PRIORITY                ( tskIDLE_PRIORITY + 2UL )
 #define mainCREATOR_TASK_PRIORITY           ( tskIDLE_PRIORITY + 3UL )
-#define mainTIMER1_TASK_PRIORITY						( tskIDLE_PRIORITY + 1UL )
+#define mainTIMER_CH1_TASK_PRIORIT			( tskIDLE_PRIORITY + 1UL )
 
 /* The time between cycles of the 'check' task. */
 #define mainUSERIF_DELAY                     ( ( portTickType ) 5000 / portTICK_RATE_MS )
@@ -261,9 +261,11 @@ int main(void)
                     TaskListTbl[TaskIndex].pxCreatedTask);
     }
 
-    vTaskToggleLED(mainTOGGLE_TASK_PRIORITY , (void *) NULL);
-    vTaskSegmLED(mainSEGLED_TASK_PRIORITY, (void *)&segLedValue);
-    vTaskTimer1(mainTIMER1_TASK_PRIORITY, (void *)&segLedValue);
+    vTaskGpioToggle(mainGPIOB_CH2_TASK_PRIORITY , (void *) NULL);
+    vTaskGpioSegmLed(mainSEGLED_TASK_PRIORITY, (void *)&segLedValue);
+#if TIMER1_ON    
+    vTaskTimer1(mainTIMER_CH1_TASK_PRIORIT, (void *)&segLedValue);
+#endif
     vStartPolledQueueTasks(mainQUEUE_POLL_PRIORITY);
 
     /* The following function will only create more tasks and timers if
@@ -314,15 +316,18 @@ static void prvSetupHardware(void)
 
     /* Select UART module clock source as HXT and UART module clock divider as 1 */
     CLK_SetModuleClock(UART0_MODULE, CLK_CLKSEL1_UARTSEL_HXT, CLK_CLKDIV0_UART(1));
-
+#if TIMER1_ON
     /* Set module clock  source */
     CLK_SetModuleClock(TMR1_MODULE, CLK_CLKSEL1_TMR1SEL_HXT, 0);
+#endif
 
     /* Enable peripheral clock */
     CLK_EnableModuleClock(UART0_MODULE);
     CLK_EnableModuleClock(TMR0_MODULE);
-		CLK_EnableModuleClock(TMR1_MODULE);
-  
+#if TIMER1_ON
+	CLK_EnableModuleClock(TMR1_MODULE);
+#endif
+
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
     SystemCoreClockUpdate();
@@ -337,21 +342,17 @@ static void prvSetupHardware(void)
     /* Lock protected registers */
     SYS_LockReg();
 
+#if TIMER1_ON
     //Initial Timer1 to periodic mode with 2Hz
     TIMER_Open(TIMER1, TIMER_PERIODIC_MODE, 2);
 
-    /* Init UART to 115200-8n1 for print message */
-    UART_Open(UART0, 115200);
-
-		/* Enable Timer 0 interrupt */
+	/* Enable Timer 0 interrupt */
     TIMER_EnableInt(TIMER1);
     NVIC_EnableIRQ(TMR1_IRQn);
+#endif
 
-    /* Init GPIO */
-    GPIO_SetMode(PB, BIT2, GPIO_MODE_OUTPUT);
-
-    /* Initi GPIO for 7-segment LEDs */
-    Open_Seven_Segment();
+    /* Init UART to 115200-8n1 for print message */
+    UART_Open(UART0, 115200);
 
 }
 /*-----------------------------------------------------------*/

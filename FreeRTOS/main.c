@@ -220,6 +220,8 @@ typedef void (*TaskFunction_t)(void *pvParameters);
 static void vUserIFTask(void *pvParameters);
 
 xQueueHandle xTimerQueue = NULL;
+xSemaphoreHandle xTimerSemaphore = NULL;
+
 #define xTimerQueueLen              10
 
 struct _TaskListTbl {
@@ -447,6 +449,15 @@ static void vStartTaskCreate(void)
     if( xTimerQueue == 0 )
     {
         /* TODO : Queue create fail */
+    }
+
+    
+	/* Create binary semaphore and the counter is 0 when create  */
+	vSemaphoreCreateBinary(xTimerSemaphore);
+	
+	if(xTimerSemaphore == NULL)
+    {
+        /* TODO : Semaphore create */
     }
 }
 

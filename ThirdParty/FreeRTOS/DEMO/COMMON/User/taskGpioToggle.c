@@ -188,5 +188,5 @@ static void vLedToggleTask(void *pvParameters)
 		vTaskDelayUntil( &xLastFlashTime, xFlashRate );
 		toggleLED( uxLED );
 	}
-} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
+} 
 

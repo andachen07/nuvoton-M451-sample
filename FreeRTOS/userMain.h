@@ -76,6 +76,7 @@
 #define USER_MAIN_H
 
 #include "queue.h"
+#include "semphr.h"
 
 // module enable control
 #define TIMER1_ON                   1
@@ -90,5 +91,6 @@ void vTaskGpioSegmLed(unsigned portBASE_TYPE uxPriority, void * pvArg );
 void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
 
 extern xQueueHandle xTimerQueue;
+extern xSemaphoreHandle  xTimerSemaphore;
 #endif
 

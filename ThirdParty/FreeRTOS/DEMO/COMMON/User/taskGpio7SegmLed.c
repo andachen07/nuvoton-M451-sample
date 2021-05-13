@@ -166,5 +166,5 @@ static void vSegLedTask(void *pvParameters)
         segLedShow = (segLedShow + 1) % 1000;
         segmLedDisplay(segLedShow, segmLedValue);
 	}
-} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
+}
 

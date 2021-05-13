@@ -93,6 +93,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 /* Demo program include files. */
 #include "userMain.h"
@@ -110,11 +111,12 @@ static uint8_t segLedValue = 0;
 /*---------------------------------------------------------------------------------------------------------*/
 void TMR1_IRQHandler(void)
 {
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
     // clear Timer0 interrupt flag
     TIMER_ClearIntFlag(TIMER1);
 
-	xTaskResumeFromISR(xTimer1Handle);
+    xSemaphoreGiveFromISR(xTimerSemaphore,&xHigherPriorityTaskWoken);
 }
 /*-----------------------------------------------------------*/
 void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg )
@@ -136,24 +138,32 @@ void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg )
 static void vTimer1Task(void *pvParameters)
 {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+    portBASE_TYPE xResult;
 
     /* Start Timer 1 */
     TIMER_Start(TIMER1);
 
     for(;;)
     {
-        vTaskSuspend(NULL);
-        segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
-        if(xQueueSendFromISR(xTimerQueue,
+        xResult = xSemaphoreTake(xTimerSemaphore, (portTickType)portMAX_DELAY );
+        if(xResult == pdTRUE)
+        {
+            segLedValue == 99 ? (segLedValue = 0) : (segLedValue++);
+            if(xQueueSendFromISR(xTimerQueue,
                     (void *)&segLedValue,
                     &xHigherPriorityTaskWoken) != pdPASS ) 
-        {
-            printf("[TIM]: Add Timer-Queue failure...\n" );
-        } 
-        else 
-        {
-            printf("[TIM]: Add Timer-Queue is %d\n",segLedValue );
+            {
+                printf("[TIM]: Add Timer-Queue failure...\n" );
+            } 
+            else 
+            {
+                printf("[TIM]: Add Timer-Queue is %d\n",segLedValue );
+            }
         }
+        else
+        {
+            /* TODO: timeout */
+        }    
     }     
-} /*lint !e715 !e818 !e830 Function definition must be standard for task creation. */
+}
 

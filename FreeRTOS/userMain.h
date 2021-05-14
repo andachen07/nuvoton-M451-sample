@@ -91,6 +91,7 @@ void vTaskGpioSegmLed(unsigned portBASE_TYPE uxPriority, void * pvArg );
 void vTaskTimer1(unsigned portBASE_TYPE uxPriority, void * pvArg  );
 
 extern xQueueHandle xTimerQueue;
-extern xSemaphoreHandle  xTimerSemaphore;
+extern xSemaphoreHandle xTimerSemaphore;
+extern xSemaphoreHandle xRecursiveMutex;
 #endif
 

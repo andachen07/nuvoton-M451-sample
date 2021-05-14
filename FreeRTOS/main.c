@@ -221,6 +221,7 @@ static void vUserIFTask(void *pvParameters);
 
 xQueueHandle xTimerQueue = NULL;
 xSemaphoreHandle xTimerSemaphore = NULL;
+xSemaphoreHandle xRecursiveMutex = NULL;
 
 #define xTimerQueueLen              10
 
@@ -451,13 +452,20 @@ static void vStartTaskCreate(void)
         /* TODO : Queue create fail */
     }
 
-    
 	/* Create binary semaphore and the counter is 0 when create  */
 	xTimerSemaphore = xSemaphoreCreateCounting(1,0);
 	
 	if(xTimerSemaphore == NULL)
     {
-        /* TODO : Semaphore create */
+        /* TODO : Semaphore create fail */
+    }
+
+	/* Create muxtex */
+    xRecursiveMutex = xSemaphoreCreateRecursiveMutex();
+	
+	if(xRecursiveMutex == NULL)
+    {
+        /* TODO : mutex create fail */
     }
 }
 

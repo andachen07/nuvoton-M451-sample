@@ -162,9 +162,12 @@ static void vSegLedTask(void *pvParameters)
         {
             /* TODO : Timeout */    
         }
-
-        segLedShow = (segLedShow + 1) % 1000;
-        segmLedDisplay(segLedShow, segmLedValue);
+        xSemaphoreTakeRecursive(xRecursiveMutex, portMAX_DELAY);
+        {
+            segLedShow = (segLedShow + 1) % 1000;
+            segmLedDisplay(segLedShow, segmLedValue);
+        }
+        xSemaphoreGiveRecursive(xRecursiveMutex);
 	}
 }
 
